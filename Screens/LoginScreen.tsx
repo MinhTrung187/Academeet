@@ -3,15 +3,27 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-const SignUpScreen = () => {
+const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const navigation :any= useNavigation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const navigation: any= useNavigation();
+
+  const handleLogin = () => {
+    // TODO: Logic xử lý đăng nhập
+    console.log('Login:', email, password);
+  };
+
+  const handleSignUpNavigate = () => {
+    // TODO: Điều hướng sang màn hình Sign Up
+    console.log('Navigate to Sign Up');
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Sign Up</Text>
+      <Text style={styles.title}>Log In</Text>
 
-      {/* Social icons */}
+      {/* Social Icons */}
       <View style={styles.socialContainer}>
         <TouchableOpacity style={[styles.socialBox, { backgroundColor: '#E6E6FA' }]}>
           <FontAwesome name="facebook" size={20} color="#000" />
@@ -30,16 +42,23 @@ const SignUpScreen = () => {
       {/* Email input */}
       <View style={styles.inputBox}>
         <Text style={styles.label}>Email</Text>
-        <TextInput style={styles.input} placeholder="Enter your email" />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+        />
       </View>
 
       {/* Password input */}
       <View style={styles.inputBox}>
-        <Text style={styles.label}>Create Password</Text>
+        <Text style={styles.label}>Password</Text>
         <View style={styles.passwordRow}>
           <TextInput
             style={[styles.input, { flex: 1 }]}
             placeholder="Enter password"
+            value={password}
+            onChangeText={setPassword}
             secureTextEntry={!showPassword}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -48,38 +67,33 @@ const SignUpScreen = () => {
         </View>
       </View>
 
-      {/* Confirm password */}
-      <View style={styles.inputBox}>
-        <Text style={styles.label}>Confirm Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm password"
-          secureTextEntry
-        />
-      </View>
-
-      {/* Sign Up button */}
-      <TouchableOpacity style={styles.signUpButton}>
-        <Text style={styles.signUpText}>Sign Up</Text>
+      {/* Log In button */}
+      <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('BasicInfo')} >
+        <Text style={styles.loginText}>Log In</Text>
       </TouchableOpacity>
 
-      {/* Already have account */}
+      {/* Forgot Password */}
+      <TouchableOpacity>
+        <Text style={styles.forgotText}>Forgot password?</Text>
+      </TouchableOpacity>
+
+      {/* Sign Up link */}
       <View style={styles.footer}>
-        <Text style={{ color: '#000' }}>Already have an account?</Text>
-        <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('LogIn')}>
-          <Text style={styles.loginText}>Log In</Text>
+        <Text style={{ color: '#000' }}>New here? Create account</Text>
+        <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('SignUp')} >
+          <Text style={styles.signUpText}>Sign Up</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-export default SignUpScreen;
+export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B7C7E3', // giống màu nền hình bạn gửi
+    backgroundColor: '#B7C7E3',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -127,7 +141,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  signUpButton: {
+  loginButton: {
     backgroundColor: '#000',
     paddingVertical: 14,
     paddingHorizontal: 32,
@@ -136,9 +150,14 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  signUpText: {
+  loginText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  forgotText: {
+    marginTop: 12,
+    color: '#000',
+    textDecorationLine: 'underline',
   },
   footer: {
     flexDirection: 'row',
@@ -146,14 +165,14 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 10,
   },
-  loginButton: {
+  signUpButton: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 8,
     elevation: 2,
   },
-  loginText: {
+  signUpText: {
     fontWeight: 'bold',
     color: '#000',
   },
