@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, Dimensions } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +18,13 @@ const BasicInfoScreen: React.FC = () => {
     const [name, setName] = useState<string>('');
     const [age, setAge] = useState<string>('');
     const [occupation, setOccupation] = useState<string>('');
+    const [studyStyle, setStudyStyle] = useState<string | null>(null);
+    const [experience, setExperience] = useState<string | null>(null);
+    const [studyPreferences, setStudyPreferences] = useState<string[]>([]);
+    const [subjectExperiences, setSubjectExperiences] = useState<{ subject: string; level: string }[]>([]);
+    const [newSubject, setNewSubject] = useState('');
+    const [newLevel, setNewLevel] = useState('');
+    const navigation:any = useNavigation();
 
     const handleNext = () => {
         if (step === 2) {
@@ -25,7 +34,7 @@ const BasicInfoScreen: React.FC = () => {
                 return;
             }
         }
-        if (step < 4) setStep(step + 1);
+        if (step < 5) setStep(step + 1);
     };
 
     const handleBack = () => {
@@ -35,7 +44,7 @@ const BasicInfoScreen: React.FC = () => {
     const renderProgressDots = () => {
         return (
             <View style={styles.progressContainer}>
-                {[1, 2, 3, 4].map((dot) => (
+                {[1, 2, 3, 4, 5].map((dot) => (
                     <View
                         key={dot}
                         style={[
@@ -56,7 +65,7 @@ const BasicInfoScreen: React.FC = () => {
             <View style={styles.background}>
                 {renderProgressDots()}
 
-                <View style={styles.cardContainer}>
+                <ScrollView contentContainerStyle={styles.cardContainer} showsVerticalScrollIndicator={false}>
                     {step === 1 && (
                         <View style={styles.card}>
                             <Text style={styles.title}>Which one of{'\n'}these are you?</Text>
@@ -68,7 +77,7 @@ const BasicInfoScreen: React.FC = () => {
                                     onPress={() => setSelected(opt.value)}
                                     activeOpacity={0.7}
                                 >
-                                    <FontAwesome name={opt.icon} size={20} color="#000" style={styles.optionIcon} />
+                                    <FontAwesome name={opt.icon as any} size={20} color="#000" style={styles.optionIcon} />
                                     <View style={styles.checkbox}>
                                         {selected === opt.value && <FontAwesome name="check" size={16} color="#000" />}
                                     </View>
@@ -188,29 +197,133 @@ const BasicInfoScreen: React.FC = () => {
                                         styles.nextBtn,
                                         { backgroundColor: name.trim() === '' ? '#ccc' : '#4CAF50' },
                                     ]}
-                                    onPress={() => {
-                                        if (name.trim() === '' || age.trim() === '' || occupation.trim() === '') {
-                                            alert('Please fill in all fields.');
-                                            return;
-                                        }
-                                        const ageNumber = parseInt(age);
-                                        if (isNaN(ageNumber) || ageNumber <= 0 || ageNumber > 120) {
-                                            alert('Please enter a valid age.');
-                                            return;
-                                        }
-                                        alert(`Hello ${name}! Age: ${age}, Occupation: ${occupation}, Group: ${selected}`);
-                                    }}
+                                    onPress={handleNext}
                                     disabled={name.trim() === ''}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={styles.nextText}>Submit</Text>
+                                    <Text style={styles.nextText}>Next</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                     )}
-                </View>
+                    {step === 5 && (
+                        <View style={styles.card}>
+                            <Text style={styles.title}>Study Preferences</Text>
+                            <Text style={styles.arrow}>----------------------------------➤</Text>
+
+                            <Text style={{ fontSize: 20, color: 'black', fontWeight: '900', marginBottom: 8 }}>Select your study preferences</Text>
+                            {["Solo", "Small Group", "Large Group", "Serious & Focused", "Friendly & Chill", "Flexible & Creative"].map((pref) => (
+                                <TouchableOpacity
+                                    key={pref}
+                                    style={styles.optionRow}
+                                    onPress={() => {
+                                        if (studyPreferences.includes(pref)) {
+                                            setStudyPreferences(studyPreferences.filter(p => p !== pref));
+                                        } else {
+                                            setStudyPreferences([...studyPreferences, pref]);
+                                        }
+                                    }}
+                                >
+                                    <View style={styles.checkbox}>
+                                        {studyPreferences.includes(pref) && <FontAwesome name="check" size={16} color="#000" />}
+                                    </View>
+                                    <Text style={styles.optionText}>{pref}</Text>
+                                </TouchableOpacity>
+                            ))}
+
+                            <Text style={{ fontSize: 20, color: 'black', fontWeight: '900', marginTop: 16, marginBottom: 10 }}>Subject Experience</Text>
+
+                            <View style={styles.inputContainer}>
+                                <FontAwesome name="book" size={20} color="#000" style={styles.inputIcon} />
+                                <TextInput
+                                    placeholder="Enter subject (e.g., English)"
+                                    value={newSubject}
+                                    onChangeText={setNewSubject}
+                                    style={styles.input}
+                                />
+                            </View>
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 }}>
+                                {['Beginner', 'Intermediate', 'Advanced'].map(level => (
+                                    <TouchableOpacity
+                                        key={level}
+                                        style={{
+                                            flex: 1,
+                                            marginHorizontal: 4,
+                                            padding: 10,
+                                            borderRadius: 8,
+                                            backgroundColor: newLevel === level ? '#4CAF50' : '#e0e0e0',
+                                            alignItems: 'center'
+                                        }}
+                                        onPress={() => setNewLevel(level)}
+                                    >
+                                        <Text style={{ color: newLevel === level ? '#fff' : '#000' }}>{level}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.nextBtn,
+                                    {
+                                        backgroundColor: newSubject && newLevel ? '#4CAF50' : '#ccc',
+                                        alignSelf: 'flex-start',
+                                        marginTop: 10,
+                                    }
+                                ]}
+                                onPress={() => {
+                                    if (newSubject && newLevel) {
+                                        setSubjectExperiences([...subjectExperiences, { subject: newSubject, level: newLevel }]);
+                                        setNewSubject('');
+                                        setNewLevel('');
+                                    }
+                                }}
+                            >
+                                <Text style={styles.nextText}>Add Subject</Text>
+                            </TouchableOpacity>
+
+                            {/* Display list of added subjects */}
+                            {subjectExperiences.map((item, idx) => (
+                                <View key={idx} style={styles.optionRow}>
+                                    <FontAwesome name="bookmark" size={20} color="#000" style={styles.optionIcon} />
+                                    <Text style={styles.optionText}>{item.subject} - {item.level}</Text>
+                                </View>
+                            ))}
+
+                            <View style={styles.row}>
+                                <TouchableOpacity
+                                    style={[styles.nextBtn, { backgroundColor: '#757575' }]}
+                                    onPress={handleBack}
+                                >
+                                    <Text style={styles.nextText}>Back</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.nextBtn, { backgroundColor: studyPreferences.length > 0 && subjectExperiences.length > 0 ? '#4CAF50' : '#ccc' }]}
+                                    disabled={studyPreferences.length === 0 || subjectExperiences.length === 0}
+                                    onPress={() => {
+                                        // alert(
+                                        //     `✅ Submitted:\n\n` +
+                                        //     `👤 Name: ${name}\n` +
+                                        //     `🎂 Age: ${age}\n` +
+                                        //     `🎓 Occupation: ${occupation}\n` +
+                                        //     `📚 Group: ${selected}\n` +
+                                        //     `📖 Study Preferences: ${studyPreferences.join(', ')}\n` +
+                                        //     `💡 Subject Experience:\n` + subjectExperiences.map(s => `- ${s.subject}: ${s.level}`).join('\n')
+                                        // );
+                                        navigation.navigate('FinishedInfo'); 
+                                        
+                                    }}
+                                >
+                                    <Text style={styles.nextText}>Done!</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+
+                </ScrollView>
             </View>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 
@@ -237,6 +350,7 @@ const styles = StyleSheet.create({
         elevation: 4,
         width: 300, // Fixed width as previously set
         alignItems: 'center',
+        marginTop: 40
     },
     headerText: {
         fontWeight: '700',
@@ -255,26 +369,27 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         marginBottom: 20,
+        marginTop: 40
     },
     progressDot: {
         width: 12,
         height: 12,
         borderRadius: 6,
         marginHorizontal: 6,
-                marginTop:90,
+        marginTop: 90,
 
     },
     cardContainer: {
-        width: 320, 
+        width: width * 0.9,
         alignSelf: 'center',
     },
     card: {
         backgroundColor: '#fff',
         borderRadius: 20,
         padding: 24,
-        width: '100%', // Full width of cardContainer
-        minHeight: 200, // Minimum height
-        flexShrink: 0, // Prevent shrinking
+        width: '100%',
+        minHeight: 200,
+        flexShrink: 0,
         shadowColor: '#000',
         shadowOpacity: 0.2,
         shadowOffset: { width: 0, height: 4 },
