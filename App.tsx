@@ -8,6 +8,7 @@ import FinishedInfo from './Screens/FinishedInfo';
 import HomeScreen from './Screens/HomeScreen';
 import ProfileScreen from './Screens/MyProfile';
 import FindFriendsScreen from './Screens/FindFriendsScreen';
+import UserDetail from './Screens/UserProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +27,7 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="MyProfile" component={ProfileScreen} />
         <Stack.Screen name="FindFriends" component={FindFriendsScreen} />
+        <Stack.Screen name="UserDetail" component={UserDetail} />
 
 
 
