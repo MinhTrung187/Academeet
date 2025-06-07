@@ -6,13 +6,15 @@ import LoginScreen from './Screens/LoginScreen';
 import BasicInfoScreen from './Screens/BasicInfoScreen';
 import FinishedInfo from './Screens/FinishedInfo';
 import HomeScreen from './Screens/HomeScreen';
+import ProfileScreen from './Screens/MyProfile';
+import FindFriendsScreen from './Screens/FindFriendsScreen';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home"
+      <Stack.Navigator initialRouteName="MyProfile"
         screenOptions={{ headerShown: false, animation: 'none' }}
 
       >
@@ -22,6 +24,9 @@ export default function App() {
         <Stack.Screen name="BasicInfo" component={BasicInfoScreen} />
         <Stack.Screen name="FinishedInfo" component={FinishedInfo} />
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="MyProfile" component={ProfileScreen} />
+        <Stack.Screen name="FindFriends" component={FindFriendsScreen} />
+
 
 
 

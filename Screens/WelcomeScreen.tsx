@@ -8,6 +8,7 @@ const { width, height } = Dimensions.get("window");
 
 
 const WelcomeScreen = () => {
+  
     const navigation:any = useNavigation();
 
   return (
