@@ -23,7 +23,7 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
 
     const tabs = [
         { name: 'Home', icon: 'home', iconLib: 'Feather' },
-        { name: 'Chat', icon: 'message-circle', iconLib: 'Feather' },
+        { name: 'FriendList', icon: 'message-circle', iconLib: 'Feather' },
         { name: 'MyProfile', icon: 'user', iconLib: 'Feather' },
     ];
 
