@@ -20,11 +20,20 @@ import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
+type Message = {
+  id: number;
+  text: string;
+  isUser: boolean;
+};
+
 const AIAssistantScreen: React.FC = () => {
-  const navigation: any = useNavigation();
-  const [messages, setMessages] = useState<{ id: number; text: string; isUser: boolean }[]>([]);
+  const navigation = useNavigation<any>();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<any>(null); // Lưu thông tin file đã upload
+  const [requestForFile, setRequestForFile] = useState(''); // Yêu cầu xử lý file
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = new Animated.Value(0);
 
@@ -36,23 +45,55 @@ const AIAssistantScreen: React.FC = () => {
     }).start();
   }, []);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputText.trim()) {
-      const newMessage = { id: messages.length + 1, text: inputText, isUser: true };
+      const newMessage: Message = { id: messages.length + 1, text: inputText, isUser: true };
       setMessages([...messages, newMessage]);
       setInputText('');
       setIsTyping(true);
 
-      setTimeout(() => {
-        const aiResponse = {
+      try {
+        const formData = new FormData();
+        formData.append('SessionId', sessionId || '');
+        formData.append('Prompt', inputText);
+
+        const response = await fetch('http://172.16.1.107:7187/api/AIChat/send-message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          const aiResponse: Message = {
+            id: messages.length + 2,
+            text: data.reply || 'Không có phản hồi từ AI',
+            isUser: false,
+          };
+          setMessages((prev) => [...prev, aiResponse]);
+          setSessionId(data.sessionId || '');
+        } else {
+          const aiResponse: Message = {
+            id: messages.length + 2,
+            text: 'Lỗi khi gọi API: ' + (data.message || 'Không xác định'),
+            isUser: false,
+          };
+          setMessages((prev) => [...prev, aiResponse]);
+        }
+      } catch (error) {
+        console.error('Lỗi khi gọi API:', error);
+        const aiResponse: Message = {
           id: messages.length + 2,
-          text: `AI Response: Analyzing "${inputText}"... Here's a sample response.`,
+          text: 'Lỗi kết nối: Vui lòng thử lại sau',
           isUser: false,
         };
         setMessages((prev) => [...prev, aiResponse]);
+      } finally {
         setIsTyping(false);
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 1000);
+      }
     }
   };
 
@@ -64,32 +105,84 @@ const AIAssistantScreen: React.FC = () => {
       });
       if (result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        const newMessage = {
+        setUploadedFile(file); // Lưu thông tin file
+        const newMessage: Message = {
           id: messages.length + 1,
-          text: `Uploaded document: ${file.name}`,
+          text: `Uploaded document: ${file.name}. Vui lòng nhập yêu cầu xử lý (ví dụ: tóm tắt, phân tích, dịch).`,
           isUser: true,
         };
         setMessages([...messages, newMessage]);
-        setIsTyping(true);
-
-        setTimeout(() => {
-          const aiResponse = {
-            id: messages.length + 2,
-            text: `AI Analysis: Document "${file.name}" has been analyzed. Summary: [Sample summary].`,
-            isUser: false,
-          };
-          setMessages((prev) => [...prev, aiResponse]);
-          setIsTyping(false);
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 1500);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
       }
     } catch (error) {
       console.error('Error uploading document:', error);
     }
   };
 
+  const handleSendRequestForFile = async () => {
+    if (uploadedFile && requestForFile.trim()) {
+      const newMessage: Message = {
+        id: messages.length + 1,
+        text: `Yêu cầu: ${requestForFile} cho file ${uploadedFile.name}`,
+        isUser: true,
+      };
+      setMessages([...messages, newMessage]);
+      setRequestForFile('');
+      setIsTyping(true);
+
+      try {
+        const formData = new FormData();
+        formData.append('SessionId', sessionId || '');
+        formData.append('Prompt', requestForFile);
+        formData.append('File', {
+          uri: uploadedFile.uri,
+          name: uploadedFile.name,
+          type: uploadedFile.mimeType || 'application/octet-stream',
+        } as any);
+
+        const response = await fetch('http://localhost:7187/api/AIChat/send-message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          const aiResponse: Message = {
+            id: messages.length + 2,
+            text: data.reply || 'Không có phản hồi từ AI cho file',
+            isUser: false,
+          };
+          setMessages((prev) => [...prev, aiResponse]);
+          setSessionId(data.sessionId || '');
+        } else {
+          const aiResponse: Message = {
+            id: messages.length + 2,
+            text: 'Lỗi khi xử lý file: ' + (data.message || 'Không xác định'),
+            isUser: false,
+          };
+          setMessages((prev) => [...prev, aiResponse]);
+        }
+      } catch (error) {
+        console.error('Lỗi khi gọi API với file:', error);
+        const aiResponse: Message = {
+          id: messages.length + 2,
+          text: 'Lỗi kết nối: Vui lòng thử lại sau',
+          isUser: false,
+        };
+        setMessages((prev) => [...prev, aiResponse]);
+      } finally {
+        setIsTyping(false);
+        setUploadedFile(null); // Reset file sau khi xử lý
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }
+    }
+  };
+
   const handleQuickAction = (action: string) => {
-    const newMessage = {
+    const newMessage: Message = {
       id: messages.length + 1,
       text: `Quick Action: ${action}`,
       isUser: true,
@@ -98,7 +191,7 @@ const AIAssistantScreen: React.FC = () => {
     setIsTyping(true);
 
     setTimeout(() => {
-      const aiResponse = {
+      const aiResponse: Message = {
         id: messages.length + 2,
         text: `AI Response: Performing ${action.toLowerCase()}... Here's a sample result.`,
         isUser: false,
@@ -115,7 +208,6 @@ const AIAssistantScreen: React.FC = () => {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        {/* Fixed Header */}
         <LinearGradient
           colors={['#60A5FA', '#3B82F6', '#1D4ED8']}
           style={styles.header}
@@ -151,6 +243,25 @@ const AIAssistantScreen: React.FC = () => {
             </View>
           )}
         </ScrollView>
+
+        {uploadedFile && (
+          <View style={styles.fileRequestContainer}>
+            <TextInput
+              style={styles.input}
+              value={requestForFile}
+              onChangeText={setRequestForFile}
+              placeholder="Nhập yêu cầu cho file (tóm tắt, phân tích, dịch...)"
+              placeholderTextColor="#94A3B8"
+              multiline
+            />
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleSendRequestForFile}
+            >
+              <FontAwesome name="paper-plane" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.quickActionsContainer}>
           <TouchableOpacity
@@ -241,7 +352,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingVertical: 24,
-    paddingTop: 80, // Offset for header
+    paddingTop: 80,
     paddingBottom: 150,
   },
   messageBubble: {
@@ -264,7 +375,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
-    color:  '#fff' ,
+    color: '#fff',
     fontFamily: 'Poppins-Regular',
   },
   typingIndicator: {
@@ -366,6 +477,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
+  },
+  fileRequestContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderTopWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 25,
+    marginHorizontal: 8,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
 });
 
