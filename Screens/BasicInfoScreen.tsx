@@ -23,6 +23,11 @@ interface Option {
     value: string;
     icon: string;
 }
+interface CurrentUser {
+    name: string;
+    middleName: string;
+    dateOfBirth: string;
+}
 
 const iconMapping: Record<string, string> = {
     Student: 'graduation-cap',
@@ -55,15 +60,13 @@ const generateValue = (name: string): string => {
 const fetchOptions = async (url: string): Promise<Option[]> => {
     try {
         const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         const data: ApiResponse = await response.json();
         const items = data.$values;
         return items.map((item: Item) => ({
             label: item.name,
-            value: generateValue(item.name),
-            icon: iconMapping[item.name] ?? 'question-circle',
+            value: item.id.toString(), // Sử dụng id từ API làm value
+            icon: iconMapping[item.name] ?? 'question',
         }));
     } catch (error) {
         console.error(`Error fetching from ${url}:`, error);
@@ -89,7 +92,9 @@ const BasicInfoScreen: React.FC = () => {
     const [options, setOptions] = useState<Option[]>([]); // Dữ liệu từ step 1
     const [loading, setLoading] = useState<boolean>(true); // Thêm state loading
     const [error, setError] = useState<string | null>(null); // Thêm state error
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const navigation = useNavigation<any>();
+
 
     // Lấy dữ liệu từ API khi component mount
     // Cập nhật useEffect để bao gồm API GenderIdentity
@@ -102,16 +107,18 @@ const BasicInfoScreen: React.FC = () => {
         const loadData = async () => {
             setLoading(true);
             try {
-                const [prefs, levels, genderOptions, subjectOptionsData] = await Promise.all([
+                const [prefs, levels, genderOptions, subjectOptions, currentUserData] = await Promise.all([
                     fetchOptions('http://172.16.1.107:7187/api/StudyPreference'),
                     fetchOptions('http://172.16.1.107:7187/api/EducationLevel'),
                     fetchOptions('http://172.16.1.107:7187/api/GenderIdentity'),
                     fetchOptions('http://172.16.1.107:7187/api/Subject'),
+                    fetch('http://172.16.1.107:7187/api/User/current-user').then(res => res.json()),
                 ]);
                 setStudyPreferences(prefs);
                 setEducationLevels(levels);
                 setGenderOptions(genderOptions);
-                setSubjectOptions(subjectOptionsData);
+                setSubjectOptions(subjectOptions);
+                setCurrentUser(currentUserData); // Lưu dữ liệu người dùng hiện tại
                 const initialOptions = await fetchOptions('http://172.16.1.107:7187/api/Occupation');
                 setOptions(initialOptions);
             } catch (err) {
@@ -122,6 +129,60 @@ const BasicInfoScreen: React.FC = () => {
         };
         loadData();
     }, []);
+    const getIdFromValue = (value: string, options: Option[]): number => {
+  const option = options.find(opt => opt.value === value);
+  return option ? parseInt(option.value) : 0; // value là id từ API
+};
+
+const HandleFinish = async () => {
+  if (!currentUser) {
+    console.error('Current user data not loaded');
+    return;
+  }
+
+  // Tách name từ currentUser
+  const nameParts = currentUser.name.split(' ');
+  const userData = {
+    firstName: nameParts[0] || '', // "Trung"
+    lastName: nameParts[nameParts.length - 1] || '', // "Nguyen"
+    middleName: nameParts.slice(1, -1).join(' ') || '', // Rỗng nếu không có middle name
+    dateOfBirth: '2003-06-12', // Xóa giá trị mặc định không hợp lệ
+    bio: occupation || '', // Từ step 3
+    occupationId: getIdFromValue(selected || '', options), // Từ step 1, dùng value trực tiếp
+    genderIdentityId: getIdFromValue(name || '', genderOptions), // Từ step 4, dùng value trực tiếp
+    educationLevelId: getIdFromValue(selectedEducationLevel || '', educationLevels), // Từ step 2, dùng value trực tiếp
+    studyPreferenceIds: studyPreferencesSelected.map(pref => getIdFromValue(pref, studyPreferences)), // Từ step 2
+    subjectIds: subjectExperiences.map(item => getIdFromValue(item.subject, subjectOptions)), // Từ step 5
+  };
+
+  console.log('Sending user data:', userData); // Debug dữ liệu gửi đi
+
+  try {
+    const response = await fetch('http://172.16.1.107:7187/api/user', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        // Thêm header Authorization nếu cần
+        // 'Authorization': `Bearer ${yourToken}`,
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const responseData = await response.text(); // Lấy toàn bộ phản hồi
+    if (response.ok) {
+      console.log('User information updated successfully:', userData);
+      navigation.navigate('FinishedInfo');
+    } else {
+      console.error('Failed to update user information:', {
+        status: response.status,
+        statusText: response.statusText,
+        responseData: responseData,
+      });
+    }
+  } catch (error) {
+    console.error('Error updating user information:', error);
+  }
+};
 
     const handleNext = () => {
         if (step === 2) {
@@ -398,9 +459,7 @@ const BasicInfoScreen: React.FC = () => {
                                                 },
                                             ]}
                                             disabled={subjectExperiences.length === 0}
-                                            onPress={() => {
-                                                navigation.navigate('FinishedInfo');
-                                            }}
+                                            onPress={HandleFinish}
                                         >
                                             <Text style={styles.nextText}>Done!</Text>
                                         </TouchableOpacity>
