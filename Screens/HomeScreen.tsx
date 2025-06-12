@@ -62,7 +62,7 @@ const HomeScreen: React.FC = () => {
       name: 'FIND FRIEND',
       icon: 'user-plus',
       backgroundColor: '#3B82F6',
-      onPress: () => navigation.navigate('FindFriends'),
+      onPress: () => navigation.navigate('BasicInfo'),
 
     },
     {

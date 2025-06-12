@@ -2,10 +2,14 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import { useNavigation } from '@react-navigation/native';
+
 
 const { width } = Dimensions.get('window');
 
 const FinishedInfo: React.FC = () => {
+      const navigation:any = useNavigation();
+
   return (
     <View style={styles.container}>
       <Animatable.Text
@@ -31,7 +35,7 @@ const FinishedInfo: React.FC = () => {
         >
           <TouchableOpacity
             style={styles.startBtn}
-            onPress={() => console.log('Navigate to profile')}
+            onPress={() => navigation.navigate('Home')}
             activeOpacity={0.8}
           >
             <View style={styles.gradientBtn}>
