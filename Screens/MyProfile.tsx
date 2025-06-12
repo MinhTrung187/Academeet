@@ -12,12 +12,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
 import BottomNavbar from '../Component/BottomNavbar';
+import { useNavigation } from '@react-navigation/native';
+
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
 
 const ProfileScreen: React.FC = () => {
   const scaleAnim = new Animated.Value(0);
+  const navigation = useNavigation();
+  //-@ts
+  const handleLogout = () => {
+    // Xóa token hoặc session nếu có ở đây (AsyncStorage, Redux, v.v.)
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Welcome'  as never}],
+    });
+  };
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -97,6 +108,14 @@ const ProfileScreen: React.FC = () => {
               </View>
             </LinearGradient>
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.logoutButton}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+
         </LinearGradient>
 
         {/* Bottom Navbar */}
@@ -121,7 +140,7 @@ const styles = StyleSheet.create({
     top: 48,
     zIndex: 2,
     alignSelf: 'center',
-    marginTop:70
+    marginTop: 70
 
   },
   avatarBorder: {
@@ -236,6 +255,21 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
+  logoutButton: {
+    marginTop: 16,
+    alignSelf: 'center',
+    backgroundColor: '#EF4444',
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+  },
+
 });
 
 export default ProfileScreen;
