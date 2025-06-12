@@ -1,23 +1,53 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
 
 const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigation: any= useNavigation();
+  const navigation: any = useNavigation();
 
-  const handleLogin = () => {
-    // TODO: Logic xử lý đăng nhập
-    console.log('Login:', email, password);
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post('http://172.16.1.107:7187/api/Authentication/login', {
+        email,
+        password,
+      });
+
+      console.log('✅ Login Success:', response.data);
+
+
+      navigation.navigate('Home');
+    } catch (error: any) {
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || 'Unknown server error';
+
+        console.log(`❌ HTTP ${status} - ${message}`);
+
+        if (status === 400) {
+          Alert.alert('Login Failed', 'Email hoặc mật khẩu không hợp lệ.');
+        } else if (status === 401) {
+          Alert.alert('Unauthorized', 'Email hoặc mật khẩu không hợp lệ.');
+        } else if (status === 500) {
+          Alert.alert('Server Error', 'Lỗi hệ thống, vui lòng thử lại sau.');
+        } else {
+          Alert.alert('Error', message);
+        }
+
+      } else if (error.request) {
+        console.log('❌ No response received from server.');
+        Alert.alert('Network Error', 'Không thể kết nối tới server. Kiểm tra mạng hoặc API.');
+      } else {
+        console.log('❌ Unexpected Error:', error.message);
+        Alert.alert('Unexpected Error', error.message || 'Đã xảy ra lỗi không xác định.');
+      }
+    }
   };
 
-  const handleSignUpNavigate = () => {
-    // TODO: Điều hướng sang màn hình Sign Up
-    console.log('Navigate to Sign Up');
-  };
 
   return (
     <View style={styles.container}>
@@ -68,7 +98,7 @@ const LoginScreen = () => {
       </View>
 
       {/* Log In button */}
-      <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('BasicInfo')} >
+      <TouchableOpacity style={styles.loginButton} onPress={handleLogin} >
         <Text style={styles.loginText}>Log In</Text>
       </TouchableOpacity>
 
