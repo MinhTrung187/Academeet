@@ -10,6 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -321,6 +322,8 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+        marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+    
   },
   header: {
     position: 'absolute',

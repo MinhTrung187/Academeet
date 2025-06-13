@@ -108,18 +108,18 @@ const BasicInfoScreen: React.FC = () => {
             setLoading(true);
             try {
                 const [prefs, levels, genderOptions, subjectOptions, currentUserData] = await Promise.all([
-                    fetchOptions('http://172.16.1.107:7187/api/StudyPreference'),
-                    fetchOptions('http://172.16.1.107:7187/api/EducationLevel'),
-                    fetchOptions('http://172.16.1.107:7187/api/GenderIdentity'),
-                    fetchOptions('http://172.16.1.107:7187/api/Subject'),
-                    fetch('http://172.16.1.107:7187/api/User/current-user').then(res => res.json()),
+                    fetchOptions('http://172.16.1.117:7187/api/StudyPreference'),
+                    fetchOptions('http://172.16.1.117:7187/api/EducationLevel'),
+                    fetchOptions('http://172.16.1.117:7187/api/GenderIdentity'),
+                    fetchOptions('http://172.16.1.117:7187/api/Subject'),
+                    fetch('http://172.16.1.117:7187/api/User/current-user').then(res => res.json()),
                 ]);
                 setStudyPreferences(prefs);
                 setEducationLevels(levels);
                 setGenderOptions(genderOptions);
                 setSubjectOptions(subjectOptions);
                 setCurrentUser(currentUserData); // Lưu dữ liệu người dùng hiện tại
-                const initialOptions = await fetchOptions('http://172.16.1.107:7187/api/Occupation');
+                const initialOptions = await fetchOptions('http://172.16.1.117:7187/api/Occupation');
                 setOptions(initialOptions);
             } catch (err) {
                 setError('Failed to load options');
@@ -158,7 +158,7 @@ const HandleFinish = async () => {
   console.log('Sending user data:', userData); // Debug dữ liệu gửi đi
 
   try {
-    const response = await fetch('http://172.16.1.107:7187/api/user', {
+    const response = await fetch('http://172.16.1.117:7187/api/user', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

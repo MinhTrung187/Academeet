@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, SafeAreaView, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import HeaderComponent from '../Component/HeaderComponent';
 import BottomNavbar from '../Component/BottomNavbar';
@@ -87,6 +87,8 @@ const PremiumScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+            marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+    
   },
   container: {
     flex: 1,

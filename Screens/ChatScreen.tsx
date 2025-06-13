@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
   },
   chatHeader: {
     flexDirection: 'row',
