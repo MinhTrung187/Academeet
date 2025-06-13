@@ -8,6 +8,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -118,30 +119,32 @@ const FriendListScreen: React.FC = () => {
   );
 
   return (
-    <LinearGradient
-      colors={['#E0F2FE', '#F0F9FF', '#F8FAFC']}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chats</Text>
-        </View>
-        <View style={styles.friendListContainer}>
-          {sampleFriends.length > 0 ? (
-            <FlatList
-              data={sampleFriends}
-              renderItem={renderFriendItem}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.friendListContent}
-            />
-          ) : (
-            <Text style={styles.noFriendsText}>No friends available</Text>
-          )}
-        </View>
-      </SafeAreaView>
-      <BottomNavbar/>
-    </LinearGradient>
+    <>
+      <LinearGradient
+        colors={['#E0F2FE', '#F0F9FF', '#F8FAFC']}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Chats</Text>
+          </View>
+          <View style={styles.friendListContainer}>
+            {sampleFriends.length > 0 ? (
+              <FlatList
+                data={sampleFriends}
+                renderItem={renderFriendItem}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.friendListContent}
+              />
+            ) : (
+              <Text style={styles.noFriendsText}>No friends available</Text>
+            )}
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+      <BottomNavbar />
+    </>
   );
 };
 
@@ -151,6 +154,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
   },
   header: {
     paddingHorizontal: 24,

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, SafeAreaView, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import HeaderComponent from '../Component/HeaderComponent';
@@ -30,7 +30,7 @@ const StudyToolScreen = () => {
 
     return (
         <LinearGradient colors={['#E6F0FA', '#F5F7FA', '#FFFFFF']} style={styles.container}>
-            <SafeAreaView style={{flex:1}}>
+            <SafeAreaView style={{ flex: 1 }}>
                 <HeaderComponent />
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
@@ -55,7 +55,7 @@ const StudyToolScreen = () => {
                         ))}
                     </View>
                 </ScrollView>
-                <BottomNavbar/>
+                <BottomNavbar />
             </SafeAreaView>
 
         </LinearGradient>
@@ -86,11 +86,13 @@ const shadeColor = (color: any, percent: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+
     },
     scrollContent: {
         flexGrow: 1,
         alignItems: 'center',
-        marginTop:20
+        marginTop: 20
     },
     header: {
         marginBottom: 20,

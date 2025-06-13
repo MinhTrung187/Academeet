@@ -45,7 +45,7 @@ const SignUpScreen = () => {
     }
 
     try {
-      const response = await axios.post('http://172.16.1.107:7187/api/Authentication/register', {
+      const response = await axios.post('http://172.16.1.117:7187/api/Authentication/register', {
         email,
         password,
         confirmPassword,
@@ -54,8 +54,6 @@ const SignUpScreen = () => {
         dateOfBirth,
       })
       console.log('Response:', response.data);
-
-      ;
 
       Alert.alert('Success', 'Registered successfully!');
     } catch (error: any) {

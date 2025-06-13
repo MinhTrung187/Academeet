@@ -12,7 +12,7 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://172.16.1.107:7187/api/Authentication/login', {
+      const response = await axios.post('http://172.16.1.117:7187/api/Authentication/login', {
         email,
         password,
       });

@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,244 +18,271 @@ type Friend = {
   id: string;
   name: string;
   age: number;
-  city: string;
-  field: string;
-  avatar: string;
+  bio?: string;
+  field?: string;
+  avatar?: string;
   online: boolean;
-  bio: string;
-  time: string;
-  activity: string;
-  level: string;
-  group: string;
+  time?: string;
+  activity?: string;
+  level?: string;
+  group?: string;
+  subjects?: string[];
+  studyPreferences?: string[];
 };
 
-type UserDetailRouteProp = RouteProp<{ UserDetail: { friend: Friend; onAccept: () => void; onReject: () => void; onGoBack: () => void } }, 'UserDetail'>;
+type UserDetailRouteProp = RouteProp<
+  {
+    UserDetail: {
+      friend: Friend;
+      onAccept: () => void;
+      onReject: () => void;
+      onGoBack: () => void;
+    };
+  },
+  'UserDetail'
+>;
 
 const UserDetail: React.FC = () => {
   const route = useRoute<UserDetailRouteProp>();
   const { friend, onAccept, onReject, onGoBack } = route.params;
-  const { width } = Dimensions.get('window');
+
+  const getSafeValue = (value: string | undefined, defaultValue = 'Not specified') =>
+    value || defaultValue;
+
+  const getSafeArray = (array: string[] | undefined, defaultValue = 'No info') =>
+    array && array.length > 0 ? array.join(', ') : defaultValue;
 
   return (
-    <>
-    <SafeAreaView style={styles.safeArea}>
-      <HeaderComponent/>
-      <View style={styles.container}>
-        <View style={styles.avatarWrapper}>
-          <Image source={{ uri: friend.avatar }} style={styles.avatar} />
-          {friend.online && <View style={styles.onlineIndicator} />}
-        </View>
-        <Text style={styles.name}>{friend.name}</Text>
-        <Text style={styles.info}>{friend.age}, {friend.city}</Text>
-        <View style={styles.badgeContainer}>
-          <TouchableOpacity style={[styles.badge, styles.rejectBadge]}>
-            <Text style={styles.badgeText}>{friend.field}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.badge, styles.acceptBadge]}>
-            <Text style={styles.badgeText}>{friend.level}</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.bio}>{friend.bio}</Text>
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailItem}>
-            <FontAwesome name="clock-o" size={16} color="#FF6F61" />
-            <Text style={styles.detailText}>{friend.time}</Text>
+    <LinearGradient
+      colors={['#E0ECFF', '#F0F4FF']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <HeaderComponent />
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Avatar */}
+          <View style={styles.avatarWrapper}>
+            <View style={styles.avatarGlow}>
+              <Image
+                source={{ uri: friend.avatar || 'https://via.placeholder.com/150' }}
+                style={styles.avatar}
+              />
+              {friend.online && <View style={styles.onlineIndicator} />}
+            </View>
+            <Text style={styles.name}>{getSafeValue(friend.name)}</Text>
+            <Text style={styles.info}>{friend.age} years old · {getSafeValue(friend.field)}</Text>
           </View>
-          <View style={styles.detailItem}>
-            <FontAwesome name="heartbeat" size={16} color="#4CAF50" />
-            <Text style={styles.detailText}>{friend.activity}</Text>
+
+          {/* Badges */}
+          <View style={styles.badgeContainer}>
+            <View style={styles.badge}>
+              <FontAwesome name="graduation-cap" size={14} color="#2563EB" />
+              <Text style={styles.badgeText}> {getSafeValue(friend.field)}</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: '#D1FAE5' }]}>
+              <FontAwesome name="star" size={14} color="#10B981" />
+              <Text style={styles.badgeText}> {getSafeValue(friend.level)}</Text>
+            </View>
           </View>
-          <View style={styles.detailItem}>
-            <FontAwesome name="users" size={16} color="#FFC107" />
-            <Text style={styles.detailText}>{friend.group}</Text>
+
+          {/* Detail Sections */}
+          <View style={styles.detailBlock}>
+            <Text style={styles.detailLabel}>Subjects</Text>
+            <View style={styles.detailRow}>
+              <FontAwesome name="book" size={18} color="#4A90E2" />
+              <Text style={styles.detailText}>{getSafeArray(friend.subjects)}</Text>
+            </View>
+
+            <Text style={styles.detailLabel}>Study Preferences</Text>
+            <View style={styles.detailRow}>
+              <FontAwesome name="lightbulb-o" size={18} color="#9B59B6" />
+              <Text style={styles.detailText}>{getSafeArray(friend.studyPreferences)}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.rejectButton} onPress={onReject}>
-            <FontAwesome name="times" size={40} color="#FF6F61" />
+
+          {/* Bio */}
+          <View style={styles.bioContainer}>
+            <FontAwesome name="quote-left" size={14} color="#6B7280" style={{ marginRight: 6 }} />
+            <Text style={styles.bio}> {getSafeValue(friend.bio, 'No bio available')}</Text>
+            <FontAwesome name="quote-right" size={14} color="#6B7280" style={{ marginLeft: 6 }} />
+          </View>
+
+          {/* Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.rejectButton} onPress={onReject}>
+              <FontAwesome name="times" size={20} color="#FFF" />
+              <Text style={styles.buttonLabel}>Reject</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
+              <FontAwesome name="check" size={20} color="#FFF" />
+              <Text style={styles.buttonLabel}>Accept</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.backButton} onPress={onGoBack}>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
-            <FontAwesome name="check" size={40} color="#4CAF50" />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={styles.backButton} onPress={onGoBack}>
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-    <BottomNavbar/>
-    </>
-    
+        </ScrollView>
+      </SafeAreaView>
+      <BottomNavbar />
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },
-  header: {
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  userTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-    fontFamily: 'Poppins-Bold',
-  },
-  title: {
-    fontSize: 18,
-    color: '#F0F4FF',
-    fontFamily: 'Poppins-Regular',
-  },
-  avatarLarge: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  searchIcon: {
-    marginLeft: 10,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F9F9F9',
+  content: {
     padding: 20,
     alignItems: 'center',
-    marginTop: 20, // Added to prevent overlap with header
   },
   avatarWrapper: {
-    position: 'relative',
-    marginTop: 0, // Removed negative margin to avoid overlap
-    marginBottom: 15,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarGlow: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 3,
+    borderColor: '#93C5FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#60A5FA',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    marginBottom: 10,
+    backgroundColor: '#fff',
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#FFDAB9',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
   },
   onlineIndicator: {
     position: 'absolute',
-    bottom: 5,
-    right: 5,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CAF50',
+    bottom: 10,
+    right: 10,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#34D399',
     borderWidth: 2,
     borderColor: '#FFF',
   },
   name: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   info: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 15,
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
   },
   badgeContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    width: '60%',
-    marginBottom: 20,
+    marginVertical: 10,
   },
   badge: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    backgroundColor: '#DBEAFE',
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
+    marginHorizontal: 4,
     alignItems: 'center',
-    marginHorizontal: 5,
-    backgroundColor: '#fff', // Matching the image's badge style
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  rejectBadge: {
-    backgroundColor: '#FFE4E1',
-  },
-  acceptBadge: {
-    backgroundColor: '#E8F5E9',
   },
   badgeText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
     fontWeight: '600',
+    color: '#1F2937',
+  },
+  detailBlock: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  detailText: {
+    fontSize: 15,
+    color: '#374151',
+    marginLeft: 8,
+    flexShrink: 1,
+  },
+  bioContainer: {
+    backgroundColor: '#F0F4FF',
+    borderLeftWidth: 4,
+    borderColor: '#60A5FA',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bio: {
     fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '80%',
-    marginBottom: 30,
-  },
-  detailItem: {
-    alignItems: 'center',
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
+    color: '#4B5563',
+    fontStyle: 'italic',
+    flex: 1,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '50%',
+    width: '80%',
     marginBottom: 20,
   },
   rejectButton: {
-    padding: 15,
-    borderRadius: 50,
-    backgroundColor: '#FFE4E1',
+    backgroundColor: '#EF4444',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    shadowColor: '#EF4444',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   acceptButton: {
-    padding: 15,
-    borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'lightgreen',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    shadowColor: 'lightgreen',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  buttonLabel: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
   },
   backButton: {
-    padding: 10,
-    backgroundColor: '#E0E0E0',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 10,
+    borderColor: '#CBD5E0',
+    borderWidth: 1,
+    marginBottom: 10,
   },
   backText: {
-    color: '#007AFF',
+    color: '#3B82F6',
     fontSize: 16,
     fontWeight: '500',
   },

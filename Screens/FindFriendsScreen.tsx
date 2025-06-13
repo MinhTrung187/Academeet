@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Image,
   ScrollView,
 } from 'react-native';
@@ -14,241 +13,108 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavbar from '../Component/BottomNavbar';
 import { useNavigation } from '@react-navigation/native';
 import HeaderComponent from '../Component/HeaderComponent';
-
-const { width } = Dimensions.get('window');
+import axios from 'axios';
 
 const FindFriendsScreen = () => {
   const [selectedFilter, setSelectedFilter] = useState('Near me');
   const navigation = useNavigation();
+  const [activeTab, setActiveTab] = useState<'find' | 'requests'>('find');
+  const [friendRequests, setFriendRequests] = useState<
+    Array<{
+      $id: string;
+      senderId: string;
+      senderName: string;
+      recipientId: string;
+      recipientName: string;
+      sentAt: string;
+      status: string;
+    }>
+  >([]);
+  const [users, setUsers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      age: number;
+      bio?: string;
+      occupation?: string;
+      educationLevel?: string;
+      studyPreferences: { $values: string[] };
+      subjects: { $values: string[] };
+      avatars: { $values: string[] };
+    }>
+  >([]);
 
-const friends = [
-  {
-    id: '1',
-    name: 'Le Thanh Hong Khanh',
-    age: 20,
-    city: 'Ho Chi Minh City',
-    field: 'Graphic Designer',
-    avatar: 'https://randomuser.me/api/portraits/women/65.jpg',
-    online: true,
-    bio: 'Hello! I love learning and collaborating with others to study methods. Open to exchange knowledge. Let’s learn together!',
-    time: 'Morning',
-    activity: 'Everyday',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '2',
-    name: 'Nguyen Phuoc Duy',
-    age: 24,
-    city: 'Ho Chi Minh City',
-    field: 'Software Developer',
-    avatar: 'https://randomuser.me/api/portraits/men/75.jpg',
-    online: false,
-    bio: 'Hi! Passionate about coding and problem-solving. Always eager to learn new tech stacks. Let’s code together!',
-    time: 'Afternoon',
-    activity: 'Weekends',
-    level: 'Senior',
-    group: 'Team'
-  },
-  {
-    id: '3',
-    name: 'Nguyen Thi Khanh Vy',
-    age: 20,
-    city: 'Ho Chi Minh City',
-    field: 'Graphic Designer',
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-    online: true,
-    bio: 'Hello! Creative soul who loves designing and sharing ideas. Open to collaborate on art projects!',
-    time: 'Morning',
-    activity: 'Everyday',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '4',
-    name: 'Pham Minh Tuan',
-    age: 22,
-    city: 'Da Nang',
-    field: 'Web Developer',
-    avatar: 'https://randomuser.me/api/portraits/men/51.jpg',
-    online: true,
-    bio: 'Hey! Enthusiastic about web development and UI design. Let’s build awesome websites together!',
-    time: 'Afternoon',
-    activity: 'Weekdays',
-    level: 'Intermediate',
-    group: 'Team'
-  },
-  {
-    id: '5',
-    name: 'Tran Bao Ngoc',
-    age: 19,
-    city: 'Ha Noi',
-    field: 'UI/UX Designer',
-    avatar: 'https://randomuser.me/api/portraits/women/48.jpg',
-    online: false,
-    bio: 'Hi! I enjoy creating user-friendly designs. Open to learning UX research techniques. Let’s design together!',
-    time: 'Evening',
-    activity: 'Everyday',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '6',
-    name: 'Le Van Hieu',
-    age: 23,
-    city: 'Hue',
-    field: 'Mobile Developer',
-    avatar: 'https://randomuser.me/api/portraits/men/19.jpg',
-    online: true,
-    bio: 'Hello! Passionate about mobile apps. Always ready to share coding tips. Let’s develop together!',
-    time: 'Morning',
-    activity: 'Weekends',
-    level: 'Intermediate',
-    group: 'Team'
-  },
-  {
-    id: '7',
-    name: 'Doan Thi Mai',
-    age: 21,
-    city: 'Ho Chi Minh City',
-    field: 'Digital Marketer',
-    avatar: 'https://randomuser.me/api/portraits/women/29.jpg',
-    online: false,
-    bio: 'Hi! Love exploring digital trends and strategies. Open to collaborate on marketing campaigns!',
-    time: 'Afternoon',
-    activity: 'Weekdays',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '8',
-    name: 'Nguyen Quang Duy',
-    age: 24,
-    city: 'Can Tho',
-    field: 'Data Analyst',
-    avatar: 'https://randomuser.me/api/portraits/men/88.jpg',
-    online: true,
-    bio: 'Hey! Data enthusiast who loves analyzing trends. Let’s work on data projects together!',
-    time: 'Evening',
-    activity: 'Everyday',
-    level: 'Senior',
-    group: 'Team'
-  },
-  {
-    id: '9',
-    name: 'Bui Thi Kim Ngan',
-    age: 20,
-    city: 'Da Nang',
-    field: 'Marketing Student',
-    avatar: 'https://randomuser.me/api/portraits/women/25.jpg',
-    online: true,
-    bio: 'Hello! Excited about marketing and branding. Open to learning from experienced peers!',
-    time: 'Morning',
-    activity: 'Weekends',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '10',
-    name: 'Tran Van Linh',
-    age: 22,
-    city: 'Ha Noi',
-    field: 'Cybersecurity',
-    avatar: 'https://randomuser.me/api/portraits/men/33.jpg',
-    online: false,
-    bio: 'Hi! Passionate about securing systems. Let’s discuss cybersecurity best practices!',
-    time: 'Afternoon',
-    activity: 'Weekdays',
-    level: 'Intermediate',
-    group: 'Team'
-  },
-  {
-    id: '11',
-    name: 'Nguyen Hoang Anh',
-    age: 23,
-    city: 'Ho Chi Minh City',
-    field: 'AI Engineer',
-    avatar: 'https://randomuser.me/api/portraits/men/43.jpg',
-    online: true,
-    bio: 'Hey! AI lover who enjoys machine learning. Open to collaborate on AI projects!',
-    time: 'Evening',
-    activity: 'Everyday',
-    level: 'Senior',
-    group: 'Solo'
-  },
-  {
-    id: '12',
-    name: 'Le My Duyen',
-    age: 21,
-    city: 'Da Lat',
-    field: 'Psychology Student',
-    avatar: 'https://randomuser.me/api/portraits/women/17.jpg',
-    online: false,
-    bio: 'Hello! Interested in human behavior and psychology. Let’s study together!',
-    time: 'Morning',
-    activity: 'Weekends',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '13',
-    name: 'Nguyen Dinh Khoa',
-    age: 24,
-    city: 'Vung Tau',
-    field: 'Backend Developer',
-    avatar: 'https://randomuser.me/api/portraits/men/61.jpg',
-    online: true,
-    bio: 'Hi! Backend coding is my passion. Open to sharing server-side knowledge!',
-    time: 'Afternoon',
-    activity: 'Weekdays',
-    level: 'Intermediate',
-    group: 'Team'
-  },
-  {
-    id: '14',
-    name: 'Phan Thi Thao',
-    age: 22,
-    city: 'Nha Trang',
-    field: 'Finance Student',
-    avatar: 'https://randomuser.me/api/portraits/women/54.jpg',
-    online: false,
-    bio: 'Hey! Love learning about finance and investments. Let’s exchange ideas!',
-    time: 'Evening',
-    activity: 'Everyday',
-    level: 'Junior',
-    group: 'Solo'
-  },
-  {
-    id: '15',
-    name: 'Tran Quoc Huy',
-    age: 23,
-    city: 'Hue',
-    field: 'Game Developer',
-    avatar: 'https://randomuser.me/api/portraits/men/27.jpg',
-    online: true,
-    bio: 'Hello! Game development is my dream. Open to collaborate on game ideas!',
-    time: 'Morning',
-    activity: 'Weekends',
-    level: 'Intermediate',
-    group: 'Team'
-  },
-];
+  const handleRequestAction = async (requestId: string, action: 'accept' | 'reject') => {
+    try {
+      await axios.post(`/api/FriendRequest/${action}`, { requestId });
+      setFriendRequests((prev) =>
+        prev.map((r) =>
+          r.$id === requestId ? { ...r, status: action === 'accept' ? 'Accepted' : 'Rejected' } : r
+        )
+      );
+    } catch (error) {
+      console.error(`Error ${action}ing friend request:`, error);
+    }
+  };
 
+  useEffect(() => {
+    const fetchFriendRequests = async () => {
+      try {
+        const response = await axios.get('http://172.16.1.117:7187/api/FriendRequest/received');
+        if (response.data.$values) {
+          setFriendRequests(response.data.$values);
+        }
+      } catch (error) {
+        console.error('Error fetching friend requests:', error);
+      }
+    };
+
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get('http://172.16.1.117:7187/api/User/users');
+        if (response.data.$values) {
+          setUsers(response.data.$values);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    if (activeTab === 'requests') {
+      fetchFriendRequests();
+    } else {
+      fetchUsers();
+    }
+  }, [activeTab]);
 
   const filters = ['Near me', 'Related Field', 'Hobbies', 'Study'];
 
-const handleCardPress = (friendId: string) => {
-  const friend = friends.find(f => f.id === friendId);
-  if (friend) {
+const handleCardPress = (userId: string) => {
+  const user = users.find((u) => u.id === userId);
+  if (user) {
     //@ts-ignore
     navigation.navigate('UserDetail', {
-      friend,
+      friend: {
+        id: user.id,
+        name: user.name,
+        age: user.age,
+        bio: user.bio || 'No bio available',
+        field: user.occupation || 'Unknown',
+        avatar: user.avatars.$values[0] || 'https://randomuser.me/api/portraits/lego/1.jpg',
+        online: true, // API does not provide online status, default to true
+        time: user.studyPreferences?.$values[0] || 'Unknown',
+        activity: user.studyPreferences?.$values[1] || 'Unknown',
+        level: user.educationLevel || 'Unknown',
+        group: user.studyPreferences?.$values.includes('Discussion-based') ? 'Team' : 'Solo',
+        studyPreferences: user.studyPreferences?.$values || [], // Ensure array
+        subjects: user.subjects?.$values || [], // Ensure array
+      },
       onAccept: () => {
-        console.log('Accepted:', friend.name);
+        console.log('Accepted:', user.name);
         navigation.goBack();
       },
       onReject: () => {
-        console.log('Rejected:', friend.name);
+        console.log('Rejected:', user.name);
         navigation.goBack();
       },
       onGoBack: () => navigation.goBack(),
@@ -260,86 +126,144 @@ const handleCardPress = (friendId: string) => {
     <>
       <LinearGradient colors={['#E6F0FA', '#C1E0FC', '#A3BFFA']} style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          {/* Header */}
-          <HeaderComponent/>
-
-          {/* Body */}
+          <HeaderComponent />
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'find' && styles.activeTab]}
+              onPress={() => setActiveTab('find')}
+            >
+              <Text style={[styles.tabText, activeTab === 'find' && styles.activeTabText]}>
+                Find Friends
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+              onPress={() => setActiveTab('requests')}
+            >
+              <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
+                Friend Requests
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View style={{ flex: 1 }}>
-            {/* Filters */}
-            <View style={styles.filterContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 10 }}
-              >
-                {filters.map((filter, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.filterButton,
-                      selectedFilter === filter && styles.activeFilter,
-                    ]}
-                    onPress={() => setSelectedFilter(filter)}
+            {activeTab === 'find' ? (
+              <>
+                <View style={styles.filterContainer}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 10 }}
                   >
-                    <Text
-                      style={[
-                        styles.filterText,
-                        selectedFilter === filter && styles.activeFilterText,
-                      ]}
+                    {filters.map((filter, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.filterButton,
+                          selectedFilter === filter && styles.activeFilter,
+                        ]}
+                        onPress={() => setSelectedFilter(filter)}
+                      >
+                        <Text
+                          style={[
+                            styles.filterText,
+                            selectedFilter === filter && styles.activeFilterText,
+                          ]}
+                        >
+                          {filter}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                <ScrollView style={styles.cardContainer} contentContainerStyle={{ paddingBottom: 20 }}>
+                  {users.map((user) => (
+                    <TouchableOpacity
+                      key={user.id}
+                      style={styles.card}
+                      onPress={() => handleCardPress(user.id)}
                     >
-                      {filter}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Friend Cards */}
-            <ScrollView style={styles.cardContainer} contentContainerStyle={{ paddingBottom: 20 }}>
-              {friends.map((friend) => (
-                <TouchableOpacity
-                  key={friend.id}
-                  style={styles.card}
-                  onPress={() => handleCardPress(friend.id)}
-                >
-                  <View style={[styles.cardInner, {
-                    backgroundColor: friend.online ? '#F9FEFF' : '#F5F5F5'
-                  }]}>
-                    {/* Avatar trong khung nền màu */}
-                    <View style={styles.avatarContainer}>
-                      <View style={styles.avatarBox}>
-                        <Image source={{ uri: friend.avatar }} style={styles.avatar} />
+                      <View style={[styles.cardInner, { backgroundColor: '#F9FEFF' }]}>
+                        <View style={styles.avatarContainer}>
+                          <View style={styles.avatarBox}>
+                            <Image
+                              source={{
+                                uri: user.avatars.$values[0] || 'https://randomuser.me/api/portraits/lego/1.jpg',
+                              }}
+                              style={styles.avatar}
+                            />
+                          </View>
+                        </View>
+                        <View style={styles.infoContainer}>
+                          <Text style={styles.cardName}>{user.name}</Text>
+                          <Text style={styles.cardSub}>{user.age}, "12km from you"</Text>
+                          <View style={styles.row}>
+                            <FontAwesome name="gift" size={14} color="#EF5DA8" style={{ marginRight: 6 }} />
+                            <Text style={styles.cardField}>{user.occupation || 'Unknown'}</Text>
+                          </View>
+                          <View style={styles.row}>
+                            <FontAwesome name="eye" size={14} color="#10B981" style={{ marginRight: 6 }} />
+                            <Text style={[styles.statusText, { color: '#10B981' }]}>Online</Text>
+                          </View>
+                        </View>
                       </View>
-                    </View>
-
-                    {/* Info */}
-                    <View style={styles.infoContainer}>
-                      <Text style={styles.cardName}>{friend.name}</Text>
-                      <Text style={styles.cardSub}>{friend.age}, {friend.city}</Text>
-
-                      <View style={styles.row}>
-                        <FontAwesome name="gift" size={14} color="#EF5DA8" style={{ marginRight: 6 }} />
-                        <Text style={styles.cardField}>{friend.field}</Text>
-                      </View>
-
-                      <View style={styles.row}>
-                        <FontAwesome name={friend.online ? 'eye' : 'eye-slash'} size={14} color={friend.online ? '#10B981' : '#EF4444'} style={{ marginRight: 6 }} />
-                        <Text style={[styles.statusText, { color: friend.online ? '#10B981' : '#EF4444' }]}>
-                          {friend.online ? 'Online' : 'Offline'}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            ) : (
+              <ScrollView style={styles.cardContainer} contentContainerStyle={{ paddingBottom: 20 }}>
+                <Text style={styles.sectionTitle}>Friend Requests</Text>
+                {friendRequests.map((request) => (
+                  <View key={request.$id} style={styles.requestCard}>
+                    <View style={styles.requestHeader}>
+                      <Image
+                        source={{ uri: `https://api.adorable.io/avatars/50/${request.senderId}` }}
+                        style={styles.requestAvatar}
+                      />
+                      <View style={styles.requestInfo}>
+                        <Text style={styles.requestName}>{request.senderName}</Text>
+                        <Text style={styles.requestTime}>
+                          {new Date(request.sentAt).toLocaleString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
                         </Text>
                       </View>
                     </View>
+                    <View style={styles.requestActions}>
+                      {request.status === 'Pending' && (
+                        <>
+                          <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={() => handleRequestAction(request.$id, 'accept')}
+                          >
+                            <Text style={styles.actionText}>Accept</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.rejectButton]}
+                            onPress={() => handleRequestAction(request.$id, 'reject')}
+                          >
+                            <Text style={styles.actionText}>Reject</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                      {request.status !== 'Pending' && (
+                        <Text style={styles.requestStatus}>{request.status}</Text>
+                      )}
+                    </View>
                   </View>
-                </TouchableOpacity>
-
-              ))}
-            </ScrollView>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </SafeAreaView>
       </LinearGradient>
       <BottomNavbar />
     </>
-
   );
 };
 
@@ -350,47 +274,31 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  header: {
-    padding: 15,
+  tabContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
   },
-  userTextContainer: {
-    marginLeft: 12,
-    flex: 1,
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#4A90E2',
   },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-    fontFamily: 'Poppins-Bold',
-  },
-  title: {
-    fontSize: 18,
-    color: '#F0F4FF',
+  tabText: {
+    fontSize: 16,
+    color: '#6B7280',
     fontFamily: 'Poppins-Regular',
   },
-  avatarLarge: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  searchIcon: {
-    marginLeft: 10,
+  activeTabText: {
+    color: '#4A90E2',
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   filterContainer: {
     paddingVertical: 8,
@@ -423,7 +331,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     paddingHorizontal: 15,
-    marginBottom:60
+    marginBottom: 60,
   },
   card: {
     marginBottom: 15,
@@ -435,26 +343,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
   },
-  cardGradient: {
+  cardInner: {
     flexDirection: 'row',
     padding: 12,
     borderRadius: 20,
-    backgroundColor: '#D6EEFF',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
-  // avatar: {
-  //   width: 60,
-  //   height: 60,
-  //   borderRadius: 30,
-  //   borderWidth: 2,
-  //   borderColor: '#fff',
-  //   shadowColor: '#000',
-  //   shadowOpacity: 0.1,
-  //   shadowRadius: 5,
-  // },
-  cardContent: {
-    flex: 1,
+  avatarContainer: {
+    padding: 6,
+  },
+  avatarBox: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#FFEDD5',
+    borderRadius: 16,
     justifyContent: 'center',
-    marginLeft: 12,
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+  },
+  infoContainer: {
+    flex: 1,
+    marginLeft: 14,
   },
   cardName: {
     fontSize: 18,
@@ -462,82 +380,99 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     fontFamily: 'Poppins-Bold',
   },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  cardDetails: {
+  cardSub: {
     fontSize: 14,
     color: '#6B7280',
-    marginLeft: 5,
+    marginTop: 2,
     fontFamily: 'Poppins-Regular',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
   },
   cardField: {
     fontSize: 15,
     fontWeight: '500',
     color: '#4B5563',
     fontFamily: 'Poppins-Medium',
-    marginTop: 4,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
   },
   statusText: {
     fontSize: 13,
     fontFamily: 'Poppins-Regular',
   },
-  cardInner: {
-  flexDirection: 'row',
-  padding: 12,
-  borderRadius: 20,
-  backgroundColor: '#fff',
-  alignItems: 'center',
-  elevation: 3,
-  shadowColor: '#000',
-  shadowOpacity: 0.1,
-  shadowRadius: 8,
-},
-avatarContainer: {
-  padding: 6,
-},
-avatarBox: {
-  width: 80,
-  height: 80,
-  backgroundColor: '#FFEDD5', // Bạn có thể random màu theo người
-  borderRadius: 16,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-avatar: {
-  width: 60,
-  height: 60,
-  borderRadius: 12,
-},
-infoContainer: {
-  flex: 1,
-  marginLeft: 14,
-},
-cardSub: {
-  fontSize: 14,
-  color: '#6B7280',
-  marginTop: 2,
-  fontFamily: 'Poppins-Regular',
-},
-row: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginTop: 6,
-},
-
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    paddingHorizontal: 15,
+    marginVertical: 10,
+    fontFamily: 'Poppins-Bold',
+  },
+  requestCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 12,
+    marginHorizontal: 15,
+    marginBottom: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  requestHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  requestAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  requestInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  requestName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  requestTime: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+  },
+  requestActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+  },
+  actionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#4A90E2',
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  rejectButton: {
+    backgroundColor: '#EF4444',
+  },
+  actionText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  requestStatus: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'right',
+  },
 });
 
 export default FindFriendsScreen;
