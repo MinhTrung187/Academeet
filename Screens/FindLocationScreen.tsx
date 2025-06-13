@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native'; // Thêm useRoute
 import HeaderComponent from '../Component/HeaderComponent';
 import BottomNavbar from '../Component/BottomNavbar';
 
@@ -25,8 +33,16 @@ interface Friend {
   distance: string;
 }
 
+interface RouteParams {
+  userAddress?: string;
+  coordinates?: { latitude: number; longitude: number };
+}
+
 const FindLocation: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute(); // Lấy tham số từ route
+  const { userAddress, coordinates } = route.params as RouteParams; // Truy cập userAddress và coordinates
+
   const [mode, setMode] = useState<'you' | 'friends' | null>(null);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showLocations, setShowLocations] = useState(false);
@@ -85,7 +101,7 @@ const FindLocation: React.FC = () => {
   const renderLocationItem = ({ item }: { item: Location }) => (
     <TouchableOpacity
       style={styles.locationCard}
-          //@ts-ignore
+      // @ts-ignore
       onPress={() => navigation.navigate('LocationDetail', { location: item })}
     >
       <Image source={{ uri: item.image }} style={styles.locationImage} />
@@ -146,12 +162,27 @@ const FindLocation: React.FC = () => {
   return (
     <LinearGradient colors={['#E6F0FA', '#F6F8FC']} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
-        <HeaderComponent/>
+        <HeaderComponent />
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
           bounces={true}
         >
+          {/* Hiển thị địa chỉ người dùng */}
+          {userAddress && (
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressTitle}>Your Current Location:</Text>
+              <Text style={styles.addressText}>
+                <Ionicons name="location-outline" size={16} color="#4A90E2" /> {userAddress}
+              </Text>
+              {coordinates && (
+                <Text style={styles.coordinatesText}>
+                  <Ionicons name="map-outline" size={16} color="#4A90E2" /> Coordinates: {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                </Text>
+              )}
+            </View>
+          )}
+
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Find Location For</Text>
           </View>
@@ -230,11 +261,12 @@ const FindLocation: React.FC = () => {
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
-      <BottomNavbar/>
+      <BottomNavbar />
     </LinearGradient>
   );
 };
 
+// Cập nhật styles để thêm giao diện cho phần địa chỉ
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
@@ -244,6 +276,36 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 80,
+  },
+  addressContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addressTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2C3E50',
+    marginBottom: 4,
+  },
+  addressText: {
+    fontSize: 16,
+    color: '#4A90E2',
+    marginVertical: 2,
+  },
+  coordinatesText: {
+    fontSize: 14,
+    color: '#4A90E2',
+    marginVertical: 2,
   },
   titleContainer: {
     alignItems: 'center',

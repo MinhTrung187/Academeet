@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNavbar from '../Component/BottomNavbar';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import * as Location from 'expo-location';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
@@ -32,6 +34,17 @@ type FeatureItem = {
   backgroundColor: string;
   onPress: () => void;
 };
+interface UserResponse {
+  id: string;
+  name: string;
+  age: number;
+  bio?: string; // bio có thể không tồn tại
+  occupation?: string;
+  educationLevel?: string;
+  studyPreferences: { $values: string[] };
+  subjects: { $values: string[] };
+  avatars: { $values: any[] };
+}
 
 
 
@@ -57,13 +70,28 @@ const shadeColor = (color: string, percent: number) => {
 
 const HomeScreen: React.FC = () => {
   const navigation: any = useNavigation();
+  const [userName, setUserName] = useState<string>(''); // State cho tên người dùng
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Thêm trạng thái loading
   const features: FeatureItem[] = [
     {
       name: 'FIND FRIEND',
       icon: 'user-plus',
       backgroundColor: '#3B82F6',
-      onPress: () => navigation.navigate('BasicInfo'),
+      onPress: async () => {
+        try {
+          const response = await axios.get<UserResponse>('http://172.16.1.117:7187/api/User/current-user');
+          const user = response.data;
 
+          if (user.bio && user.bio.trim() !== '') {
+            navigation.navigate('FindFriends');
+          } else {
+            navigation.navigate('BasicInfo');
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          navigation.navigate('BasicInfo');
+        }
+      },
     },
     {
       name: 'GROUP & FORUM',
@@ -87,32 +115,83 @@ const HomeScreen: React.FC = () => {
       name: 'FIND LOCATION',
       icon: 'map-marker',
       backgroundColor: '#EF4444',
-      // onPress: () => console.log('Find Location'),
-      onPress: () => navigation.navigate('FindLocation'),
+      onPress: async () => {
+        try {
+          // Kiểm tra trạng thái quyền trước
+          let { status } = await Location.getForegroundPermissionsAsync();
 
-    },
+          // Nếu chưa có quyền, yêu cầu cấp quyền
+          if (status !== 'granted') {
+            const permissionResponse = await Location.requestForegroundPermissionsAsync();
+            status = permissionResponse.status;
+            if (status !== 'granted') {
+              alert('Permission to access location was denied');
+              return;
+            }
+          }
+
+          // Lấy vị trí hiện tại
+          let location = await Location.getCurrentPositionAsync({});
+          const { latitude, longitude } = location.coords;
+
+          // Chuyển đổi tọa độ thành địa chỉ
+          let addressResponse = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude,
+          });
+
+          // Lấy địa chỉ chi tiết
+          const address = addressResponse[0];
+          const fullAddress = `${address.street || ''}, ${address.city || ''}, ${address.region || ''}, ${address.country || ''}`;
+
+          // Điều hướng đến FindLocation và truyền địa chỉ
+          navigation.navigate('FindLocation', { userAddress: fullAddress, coordinates: { latitude, longitude } });
+        } catch (error) {
+          console.error('Error getting location:', error);
+          alert('Could not fetch location. Please try again.');
+        }
+      },
+    }
   ];
   const fadeAnim = new Animated.Value(0);
   const scaleAnims = features.map(() => new Animated.Value(0));
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      ...scaleAnims.map((anim, index) =>
-        Animated.spring(anim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          delay: index * 100,
-          useNativeDriver: true,
-        })
-      ),
-    ]).start();
+useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true); // Bắt đầu loading
+      try {
+        const response = await axios.get<{ name: string }>('http://172.16.1.117:7187/api/User/current-user');
+        setUserName(response.data.name);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setUserName('User'); // Giá trị mặc định nếu API thất bại
+      } finally {
+        setIsLoading(false); // Kết thúc loading
+      }
+    };
+    fetchUserData();
   }, []);
+
+  // Chạy animation sau khi dữ liệu sẵn sàng
+  useEffect(() => {
+    if (!isLoading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        ...scaleAnims.map((anim, index) =>
+          Animated.spring(anim, {
+            toValue: 1,
+            friction: 8,
+            tension: 40,
+            delay: index * 100,
+            useNativeDriver: true,
+          })
+        ),
+      ]).start();
+    }
+  }, [isLoading, fadeAnim, scaleAnims]);
 
   return (
     <LinearGradient
@@ -129,7 +208,7 @@ const HomeScreen: React.FC = () => {
             <Animated.View style={[styles.headerContent, { opacity: fadeAnim }]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.greeting}>Hello 👋</Text>
-                <Text style={styles.userName}>Nguyen Minh Trung</Text>
+                <Text style={styles.userName}>{userName}</Text>
                 <Text style={styles.subGreeting}>Welcome to AcadeMEETT 🎓</Text>
               </View>
               <Animated.View style={{ transform: [{ scale: fadeAnim }] }}>
