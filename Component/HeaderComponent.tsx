@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
+import axios from 'axios'; // Giả sử bạn đã cài đặt axios
 
 const HeaderComponent = () => {
   const { width } = Dimensions.get('window');
+  const [userName, setUserName] = useState<string>(''); // State cho tên người dùng
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Thêm trạng thái loading
+
+  // Fetch dữ liệu người dùng
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true); // Bắt đầu loading
+      try {
+        const response = await axios.get<{ name: string }>('http://172.16.1.117:7187/api/User/current-user');
+        setUserName(response.data.name);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setUserName('User'); // Giá trị mặc định nếu API thất bại
+      } finally {
+        setIsLoading(false); // Kết thúc loading
+      }
+    };
+    fetchUserData();
+  }, []);
 
   return (
     <LinearGradient
@@ -19,7 +39,7 @@ const HeaderComponent = () => {
           style={styles.avatarLarge}
         />
         <View style={styles.userTextContainer}>
-          <Text style={styles.userName}>Nguyen Minh Trung</Text>
+          <Text style={styles.userName}>{isLoading ? 'Loading...' : userName}</Text>
           <Text style={styles.title}>Find your study mate 🎓</Text>
         </View>
       </View>
