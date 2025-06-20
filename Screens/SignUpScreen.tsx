@@ -2,14 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import axios from 'axios';
-import { DatePickerModal } from 'react-native-paper-dates';
-
-const formatDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { useNavigation } from '@react-navigation/native';
 
 const SignUpScreen = () => {
   const [firstName, setFirstName] = useState('');
@@ -18,17 +11,23 @@ const SignUpScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [open, setOpen] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState(''); // Changed from Date object to string
+  const navigation: any = useNavigation();
 
   const validateEmail = (email: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
 
-  const handleSignUp = async () => {
-    const dateOfBirth = date ? formatDate(date) : '';
+  const validateDate = (date: string) => {
+    const regex = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/; // YYYY-MM-DD format
+    if (!regex.test(date)) return false;
+    const [year, month, day] = date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    return dateObj.getFullYear() === year && dateObj.getMonth() === month - 1 && dateObj.getDate() === day;
+  };
 
+  const handleSignUp = async () => {
     if (!firstName || !lastName || !dateOfBirth || !email || !password || !confirmPassword) {
       Alert.alert('Missing Fields', 'Please fill in all fields.');
       return;
@@ -44,36 +43,41 @@ const SignUpScreen = () => {
       return;
     }
 
+    if (!validateDate(dateOfBirth)) {
+      Alert.alert('Invalid Date', 'Please enter a valid date in YYYY-MM-DD format.');
+      return;
+    }
+
     try {
-      const response = await axios.post('http://172.16.1.117:7187/api/Authentication/register', {
+      const response = await axios.post('http://192.168.88.147:7187/api/Authentication/register', {
         email,
         password,
         confirmPassword,
         firstName,
         lastName,
         dateOfBirth,
-      })
+      });
       console.log('Response:', response.data);
 
-      Alert.alert('Success', 'Registered successfully!');
+      Alert.alert('Success', 'Registered successfully!', [
+        { text: 'OK', onPress: () => navigation.navigate('OtpScreen', { email }) },
+      ]);
     } catch (error: any) {
-      // Ghi chi tiết lỗi vào console
       console.log('Registration Error:', {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
       });
 
-      // Hiển thị lỗi cụ thể cho người dùng (nếu có)
       const errorMessage =
         error.response?.data?.message ||
-        error.response?.data?.title || // nếu backend trả về kiểu ASP.NET Identity
-        error.response?.data?.errors?.[0] || // nếu lỗi dạng array
+        error.response?.data?.title ||
+        error.response?.data?.errors?.[0] ||
         'Registration failed';
 
       Alert.alert('Error', errorMessage);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -118,35 +122,15 @@ const SignUpScreen = () => {
 
       <View style={styles.inputBox}>
         <Text style={styles.label}>Date of Birth</Text>
-        <TouchableOpacity
-          onPress={() => setOpen(true)}
-          style={{
-            padding: 12,
-            backgroundColor: '#f0f0f0',
-            borderRadius: 8,
-          }}
-        >
-          <Text>
-            {date ? formatDate(date) : 'Select your birth date'}
-          </Text>
-        </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your birth date (YYYY-MM-DD)"
+          value={dateOfBirth}
+          onChangeText={setDateOfBirth}
+          keyboardType="numeric"
+          maxLength={10} // Limits input to YYYY-MM-DD length
+        />
       </View>
-
-      <DatePickerModal
-        locale="en"
-        mode="single"
-        visible={open}
-        onDismiss={() => setOpen(false)}
-        date={date}
-        onConfirm={({ date }) => {
-          setOpen(false);
-          setDate(date);
-        }}
-        validRange={{ endDate: new Date() }}
-        saveLabel="Save"
-        label="Select date of birth"
-        animationType="slide"
-      />
 
       <View style={styles.inputBox}>
         <Text style={styles.label}>Email</Text>

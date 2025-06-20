@@ -14,7 +14,7 @@ const HeaderComponent = () => {
     const fetchUserData = async () => {
       setIsLoading(true); // Bắt đầu loading
       try {
-        const response = await axios.get<{ name: string }>('http://172.16.1.117:7187/api/User/current-user');
+        const response = await axios.get<{ name: string }>('http://192.168.10.233:7187/api/User/current-user');
         setUserName(response.data.name);
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -28,7 +28,7 @@ const HeaderComponent = () => {
 
   return (
     <LinearGradient
-      colors={['#4A90E2', '#2E6DD3']}
+      colors={['#634fee', '#1553f6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.header}

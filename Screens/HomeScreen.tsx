@@ -19,6 +19,14 @@ import * as Location from 'expo-location';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
+// Lấy greeting theo giờ hiện tại
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning 🌞';
+  if (hour < 18) return 'Good afternoon ☀️';
+  return 'Good evening 🌙';
+};
+const logo = require('../assets/WhiteLogo.png'); // Giả sử bạn có một logo trong assets
 
 
 type FeatureIconName =
@@ -31,9 +39,10 @@ type FeatureIconName =
 type FeatureItem = {
   name: string;
   icon: FeatureIconName;
-  backgroundColor: string;
+  gradient: [string, string, ...string[]];
   onPress: () => void;
 };
+
 interface UserResponse {
   id: string;
   name: string;
@@ -72,14 +81,16 @@ const HomeScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const [userName, setUserName] = useState<string>(''); // State cho tên người dùng
   const [isLoading, setIsLoading] = useState<boolean>(true); // Thêm trạng thái loading
+  const CARD_WIDTH = (width - 48) / 2;
+
   const features: FeatureItem[] = [
     {
       name: 'FIND FRIEND',
       icon: 'user-plus',
-      backgroundColor: '#3B82F6',
+      gradient: ['#A7F3D0', '#22C55E'], 
       onPress: async () => {
         try {
-          const response = await axios.get<UserResponse>('http://172.16.1.117:7187/api/User/current-user');
+          const response = await axios.get<UserResponse>('http://192.168.10.233:7187/api/User/current-user');
           const user = response.data;
 
           if (user.bio && user.bio.trim() !== '') {
@@ -96,25 +107,25 @@ const HomeScreen: React.FC = () => {
     {
       name: 'GROUP & FORUM',
       icon: 'users',
-      backgroundColor: '#F59E0B',
-      onPress: () => console.log('Group & Forum'),
+      gradient: ['#FBCFE8', '#EC4899'], // Rich Amber
+      onPress: () => navigation.navigate('GroupsForums'),
     },
     {
       name: 'STUDY TOOLS',
       icon: 'pencil-square-o',
-      backgroundColor: '#10B981',
+      gradient: ['#BFDBFE', '#60A5FA'], // Emerald Green
       onPress: () => navigation.navigate('Premium'),
     },
     {
       name: 'AI ASSISTANT',
       icon: 'cogs',
-      backgroundColor: '#8B5CF6',
+      gradient: ['#DDD6FE', '#7C3AED'], // Vivid Violet
       onPress: () => navigation.navigate('AIScreen'),
     },
     {
       name: 'FIND LOCATION',
       icon: 'map-marker',
-      backgroundColor: '#EF4444',
+      gradient: ['#FEF9C3', '#F59E0B'], // Strong Red
       onPress: async () => {
         try {
           // Kiểm tra trạng thái quyền trước
@@ -155,11 +166,11 @@ const HomeScreen: React.FC = () => {
   ];
   const fadeAnim = new Animated.Value(0);
   const scaleAnims = features.map(() => new Animated.Value(0));
-useEffect(() => {
+  useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true); // Bắt đầu loading
       try {
-        const response = await axios.get<{ name: string }>('http://172.16.1.117:7187/api/User/current-user');
+        const response = await axios.get<{ name: string }>('http://192.168.10.233:7187/api/User/current-user');
         setUserName(response.data.name);
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -202,23 +213,25 @@ useEffect(() => {
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
           {/* Header */}
           <LinearGradient
-            colors={['#60A5FA', '#3B82F6', '#1D4ED8']}
+            colors={['#634fee', '#1553f6', '#1553f6']}
             style={styles.headerContainer}
           >
             <Animated.View style={[styles.headerContent, { opacity: fadeAnim }]}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.greeting}>Hello 👋</Text>
+                <Text style={styles.greeting}>{getGreeting()}</Text>
                 <Text style={styles.userName}>{userName}</Text>
                 <Text style={styles.subGreeting}>Welcome to AcadeMEETT 🎓</Text>
               </View>
-              <Animated.View style={{ transform: [{ scale: fadeAnim }] }}>
-                <Image
-                  source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
-                  style={styles.avatar}
-                />
-              </Animated.View>
+              <Image source={logo} style={styles.logo} />
+
             </Animated.View>
           </LinearGradient>
+          <View style={styles.tipCard}>
+            <Text style={styles.tipTitle}>💡 Study Tip</Text>
+            <Text style={styles.tipText}>
+              Break study sessions into 25-minute focus intervals and take short breaks to stay productive.
+            </Text>
+          </View>
 
           {/* Features */}
           <View style={styles.featuresContainer}>
@@ -226,39 +239,28 @@ useEffect(() => {
               <Animated.View
                 key={index}
                 style={[
-                  styles.featureWrapper,
+                  styles.featureRow,
                   { transform: [{ scale: scaleAnims[index] }] },
                 ]}
               >
-                <LinearGradient
-                  colors={[
-                    shadeColor(feature.backgroundColor, 0.2),
-                    feature.backgroundColor,
-                    shadeColor(feature.backgroundColor, -0.2),
-                  ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.featureCard}
+                <TouchableOpacity
+                  onPress={feature.onPress}
+                  activeOpacity={0.8}
+                  style={styles.featureButtonContainer}
                 >
-                  <TouchableOpacity
-                    onPress={feature.onPress}
-                    activeOpacity={0.85}
-                    style={styles.featureButton}
+                  <LinearGradient
+                    colors={feature.gradient}
+                    style={styles.featureCircle}
                   >
-                    <FontAwesome
-                      name={feature.icon}
-                      size={40}
-                      color="#fff"
-                      style={styles.icon}
-                    />
-                    <Text style={styles.featureText}>{feature.name}</Text>
-                    <View style={styles.arrowCircle}>
-                      <FontAwesome name="arrow-right" size={16} color="#fff" />
-                    </View>
-                  </TouchableOpacity>
-                </LinearGradient>
+                    <FontAwesome name={feature.icon} size={32} color="#fff" />
+                  </LinearGradient>
+                  <Text style={styles.featureLabel}>
+                    {feature.name.replace(/_/g, ' ')}
+                  </Text>
+                </TouchableOpacity>
               </Animated.View>
             ))}
+
           </View>
         </ScrollView>
 
@@ -280,9 +282,9 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 24,
-    paddingVertical: 48,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    paddingVertical: 24, // giảm từ 48 → 24
+    borderBottomLeftRadius: 24, // giảm bo góc nhẹ lại
+    borderBottomRightRadius: 24,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -291,26 +293,34 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 16,
+    paddingBottom: 6,
   },
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    marginLeft: 12,
+  },
+
   greeting: {
-    fontSize: 20,
+    fontSize: 16, // giảm từ 20
     color: '#F0F9FF',
     fontWeight: '500',
-    fontFamily: 'Poppins-Regular', // Replace with your font
+    fontFamily: 'Poppins-Regular',
   },
   userName: {
-    fontSize: 30,
+    fontSize: 22, // giảm từ 30
     color: '#fff',
     fontWeight: '700',
     fontFamily: 'Poppins-Bold',
-    marginVertical: 6,
+    marginVertical: 4,
   },
   subGreeting: {
-    fontSize: 16,
+    fontSize: 14, // giảm từ 16
     color: '#E0F2FE',
     fontFamily: 'Poppins-Regular',
   },
+
   avatar: {
     width: 80,
     height: 80,
@@ -326,10 +336,71 @@ const styles = StyleSheet.create({
   featuresContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 32,
+    justifyContent: 'space-evenly',
+    marginTop: 20,
   },
+  featureButtonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: CARD_WIDTH,
+  },
+
+
+  featureRow: {
+    alignItems: 'center',
+    width: CARD_WIDTH, // <- dùng CARD_WIDTH đã khai báo
+    marginBottom: 24,
+  },
+
+
+  featureCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+
+
+
+
+  featureLabel: {
+    fontSize: 14, // tăng từ 12
+    textAlign: 'center',
+    fontFamily: 'Poppins-Medium',
+    marginTop: 4,
+  },
+
+  tipCard: {
+    backgroundColor: '#F0F9FF',
+    marginHorizontal: 24,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tipTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1D4ED8',
+    marginBottom: 6,
+    fontFamily: 'Poppins-Medium',
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#374151',
+    fontFamily: 'Poppins-Regular',
+    lineHeight: 20,
+  },
+
   featureWrapper: {
     width: CARD_WIDTH,
     marginBottom: 24,
@@ -358,7 +429,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    fontFamily: 'Poppins-Bold',
+    fontFamily: 'Poppins-Medium',
     marginBottom: 16,
   },
   arrowCircle: {
@@ -382,6 +453,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
+
 });
 
 export default HomeScreen;

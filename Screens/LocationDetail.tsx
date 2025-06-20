@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
@@ -56,7 +56,8 @@ const LocationDetail = () => {
 };
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
+  gradient: { flex: 1,         marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+ },
   container: { flex: 1 },
   detailImage: { width: '100%', height: 200, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
   infoContainer: { padding: 16 },

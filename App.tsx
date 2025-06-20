@@ -21,6 +21,9 @@ import StudyToolScreen from './Screens/StudyToolScreen';
 import AIAssistantScreen from './Screens/AIAssistantScreen';
 import ChatScreen from './Screens/ChatScreen';
 import FriendListScreen from './Screens/FriendListScreen';
+import OtpScreen from './Screens/OtpScreen';
+import GroupForumScreen from './Screens/GroupForumScreen';
+import MapScreen from './Screens/MapScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -34,7 +37,7 @@ export default function App() {
       >
         <NavigationContainer>
           <Stack.Navigator
-            initialRouteName="Home"
+            initialRouteName="Welcome"
             screenOptions={{ headerShown: false, animation: 'none' }}
           >
             <Stack.Screen name="Welcome" component={WelcomeScreen} />
@@ -53,6 +56,11 @@ export default function App() {
             <Stack.Screen name="AIScreen" component={AIAssistantScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="FriendList" component={FriendListScreen} />
+            <Stack.Screen name="OtpScreen" component={OtpScreen} />
+            <Stack.Screen name="GroupsForums" component={GroupForumScreen} />
+            <Stack.Screen name="Map" component={MapScreen} />
+
+
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>

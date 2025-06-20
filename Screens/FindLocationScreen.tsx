@@ -7,6 +7,7 @@ import {
   StyleSheet,
   FlatList,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -269,9 +270,11 @@ const FindLocation: React.FC = () => {
 // Cập nhật styles để thêm giao diện cho phần địa chỉ
 const styles = StyleSheet.create({
   gradient: {
+    
     flex: 1,
   },
   container: {
+    
     flex: 1,
   },
   scrollContent: {

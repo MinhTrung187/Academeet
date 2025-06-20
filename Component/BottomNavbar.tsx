@@ -29,7 +29,7 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
 
     return (
         <LinearGradient
-            colors={['#60A5FA', '#3B82F6']}
+            colors={['#634fee', '#1553f6']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.container}
@@ -55,9 +55,7 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
                             size={tab.name === 'Chat' ? 20 : 22} // Giảm kích thước icon
                             color={isActive ? '#FFFFFF' : '#D1D5DB'}
                         />
-                        <Text style={[styles.label, { color: isActive ? '#FFFFFF' : '#D1D5DB' }]}>
-                            {tab.name}
-                        </Text>
+        
                         {isActive && <View style={styles.activeIndicator} />}
                     </TouchableOpacity>
                 );
