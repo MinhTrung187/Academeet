@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,103 +20,65 @@ const FRIEND_ITEM_WIDTH = width > 600 ? width * 0.3 : width * 0.9;
 interface Friend {
   id: string;
   name: string;
-  avatar: string;
-  lastMessage: string;
-  timestamp: string;
+  avatar?: string;
+  lastMessage?: string;
+  timestamp?: string;
 }
-
-const sampleFriends: Friend[] = [
-  {
-    id: '1',
-    name: 'Nguyễn Văn A',
-    avatar: 'https://randomuser.me/api/portraits/men/11.jpg',
-    lastMessage: 'Chào bạn, hôm nay thế nào?',
-    timestamp: '10:30 sáng',
-  },
-  {
-    id: '2',
-    name: 'Trần Thị B',
-    avatar: 'https://randomuser.me/api/portraits/women/12.jpg',
-    lastMessage: 'Chiều gặp nhé!',
-    timestamp: 'Hôm qua',
-  },
-  {
-    id: '3',
-    name: 'Lê Văn C',
-    avatar: 'https://randomuser.me/api/portraits/men/13.jpg',
-    lastMessage: 'Xem thử link này nè!',
-    timestamp: '2 ngày trước',
-  },
-  {
-    id: '4',
-    name: 'Phạm Thị Dung',
-    avatar: 'https://randomuser.me/api/portraits/women/14.jpg',
-    lastMessage: 'Làm bài xong chưa?',
-    timestamp: '5 phút trước',
-  },
-  {
-    id: '5',
-    name: 'Hoàng Minh',
-    avatar: 'https://randomuser.me/api/portraits/men/15.jpg',
-    lastMessage: 'Tối nay chơi game không?',
-    timestamp: '1 giờ trước',
-  },
-  {
-    id: '6',
-    name: 'Ngô Thảo',
-    avatar: 'https://randomuser.me/api/portraits/women/16.jpg',
-    lastMessage: 'Nhớ họp nhóm nha!',
-    timestamp: '3 giờ trước',
-  },
-  {
-    id: '7',
-    name: 'Đặng Quang Huy',
-    avatar: 'https://randomuser.me/api/portraits/men/17.jpg',
-    lastMessage: 'Gửi mình tài liệu với!',
-    timestamp: '8 giờ trước',
-  },
-  {
-    id: '8',
-    name: 'Lý Thu Hằng',
-    avatar: 'https://randomuser.me/api/portraits/women/18.jpg',
-    lastMessage: 'Mai có kiểm tra đó!',
-    timestamp: 'Hôm qua',
-  },
-  {
-    id: '9',
-    name: 'Bùi Tiến Dũng',
-    avatar: 'https://randomuser.me/api/portraits/men/19.jpg',
-    lastMessage: 'Chơi Liên Quân không?',
-    timestamp: '2 phút trước',
-  },
-  {
-    id: '10',
-    name: 'Vũ Diệu Linh',
-    avatar: 'https://randomuser.me/api/portraits/women/20.jpg',
-    lastMessage: 'Ăn trưa chưa đó?',
-    timestamp: '12:00 trưa',
-  },
-];
-
 
 const FriendListScreen: React.FC = () => {
   const navigation: any = useNavigation();
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const response = await fetch('http://192.168.10.233:7187/api/Relationship/friends', {
+          method: 'GET',
+          headers: {
+            'accept': '*/*',
+          },
+        });
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          setFriends(data);
+        } else {
+          setFriends([]);
+        }
+      } catch (error) {
+        console.error('Error fetching friends:', error);
+        setFriends([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFriends();
+  }, []);
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
     <TouchableOpacity
       style={styles.friendItem}
       onPress={() => navigation.navigate('Chat', { friend: item })}
     >
-      <Image source={{ uri: item.avatar }} style={styles.friendAvatar} />
+      <Image source={{ uri: item.avatar || 'https://via.placeholder.com/50' }} style={styles.friendAvatar} />
       <View style={styles.friendInfo}>
         <Text style={styles.friendName}>{item.name}</Text>
         <Text style={styles.lastMessage} numberOfLines={1}>
-          {item.lastMessage}
+          {item.lastMessage || 'No message'}
         </Text>
       </View>
-      <Text style={styles.timestamp}>{item.timestamp}</Text>
+      <Text style={styles.timestamp}>{item.timestamp || 'N/A'}</Text>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -129,9 +91,9 @@ const FriendListScreen: React.FC = () => {
             <Text style={styles.headerTitle}>Chats</Text>
           </View>
           <View style={styles.friendListContainer}>
-            {sampleFriends.length > 0 ? (
+            {friends.length > 0 ? (
               <FlatList
-                data={sampleFriends}
+                data={friends}
                 renderItem={renderFriendItem}
                 keyExtractor={(item) => item.id}
                 showsVerticalScrollIndicator={false}
@@ -154,7 +116,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+    marginTop: StatusBar.currentHeight || 0,
   },
   header: {
     paddingHorizontal: 24,
@@ -175,7 +137,7 @@ const styles = StyleSheet.create({
     width: FRIEND_ITEM_WIDTH,
     padding: 16,
     alignSelf: 'center',
-    marginBottom:50
+    marginBottom: 50,
   },
   friendListContent: {
     paddingBottom: 16,
@@ -221,6 +183,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#64748B',
     fontFamily: 'Poppins-Regular',
+  },
+  loadingText: {
+    textAlign: 'center',
+    color: '#64748B',
+    fontFamily: 'Poppins-Regular',
+    marginTop: 20,
   },
 });
 

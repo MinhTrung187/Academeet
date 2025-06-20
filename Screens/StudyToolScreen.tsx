@@ -13,8 +13,7 @@ const tools = [
     { name: 'POMODORO TIMER', backgroundColor: '#D8BFD8', icon: '⏰' },
     { name: 'NOTE-TAKING', backgroundColor: '#B0C4DE', icon: '📝' },
     { name: 'CALENDAR', backgroundColor: '#DDA0DD', icon: '📅' },
-    { name: 'AI ASSISTANT', backgroundColor: '#FFFACD', icon: '🤖' },
-    { name: 'AI DOCUMENT ANALYSIS', backgroundColor: '#F0E68C', icon: '📄' },
+
 ];
 
 const StudyToolScreen = () => {

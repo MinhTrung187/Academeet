@@ -8,20 +8,82 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
 import BottomNavbar from '../Component/BottomNavbar';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+
 import axios from 'axios';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
 
+type RootStackParamList = {
+  Welcome: undefined;
+  // add other screens here if needed
+};
+
 const ProfileScreen: React.FC = () => {
   const scaleAnim = new Animated.Value(0);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const handleAvatarPress = () => {
+    Alert.alert(
+      'Change Avatar',
+      'Do you want to change your avatar?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes', onPress: handleChangeAvatar },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleChangeAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const image = result.assets[0];
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: image.uri,
+        name: 'avatar.jpg',
+        type: 'image/jpeg',
+      } as any);
+
+      try {
+        const response = await axios.post('http://192.168.10.233:7187/api/User/avatar', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        // Nếu API trả về link ảnh mới (giả sử response.data = newAvatarUrl)
+        const newAvatarUrl = response.data?.url || image.uri;
+
+        // Cập nhật avatar ngay không cần reload
+        setUserData(prev => ({
+          ...prev,
+          avatars: { $values: [newAvatarUrl] },
+        }));
+
+        alert('Avatar updated successfully');
+      } catch (error) {
+        console.error('Upload avatar error:', error);
+        alert('Failed to upload avatar');
+      }
+    }
+  };
+
+
   const [userData, setUserData] = useState<{
     name: string;
     age: number;
@@ -46,7 +108,7 @@ const ProfileScreen: React.FC = () => {
   const handleLogout = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Welcome' as never }],
+      routes: [{ name: 'Welcome' }],
     });
   };
 
@@ -54,27 +116,17 @@ const ProfileScreen: React.FC = () => {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get<{
-          $id: string;
-          id: string;
-          name: string;
-          age: number;
-          bio: string;
-          occupation: string;
-          educationLevel: string;
-          studyPreferences: { $id: string; $values: string[] };
-          subjects: { $id: string; $values: string[] };
-          avatars: { $id: string; $values: any[] };
-        }>('http://172.16.1.117:7187/api/User/current-user');
+        const response = await axios.get('http://192.168.10.233:7187/api/User/current-user');
+        console.log('API Response:', response.data);
         setUserData({
-          name: response.data.name,
-          age: response.data.age,
-          bio: response.data.bio || '',
-          occupation: response.data.occupation || '',
-          educationLevel: response.data.educationLevel || '',
-          studyPreferences: response.data.studyPreferences,
-          subjects: response.data.subjects,
-          avatars: response.data.avatars,
+          name: response.data.name || 'User',
+          age: response.data.age || 0,
+          bio: response.data.bio || 'No bio available',
+          occupation: response.data.occupation || 'Not specified',
+          educationLevel: response.data.educationLevel || 'Not specified',
+          studyPreferences: { $values: response.data.studyPreferences || [] }, // Đảm bảo là object với $values
+          subjects: { $values: response.data.subjects || [] }, // Đảm bảo là object với $values
+          avatars: { $values: response.data.avatars || [] },
         });
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -82,8 +134,8 @@ const ProfileScreen: React.FC = () => {
           name: 'User',
           age: 0,
           bio: 'No bio available',
-          occupation: '',
-          educationLevel: '',
+          occupation: 'Not specified',
+          educationLevel: 'Not specified',
           studyPreferences: { $values: [] },
           subjects: { $values: [] },
           avatars: { $values: [] },
@@ -106,39 +158,39 @@ const ProfileScreen: React.FC = () => {
     }
   }, [isLoading]);
 
-  const avatarUrl = userData.avatars.$values.length > 0
-    ? userData.avatars.$values[0]
-    : 'https://preview.redd.it/alright-men-whats-your-thoughts-on-ishowspeed-v0-h62uj8viu3cd1.jpeg?auto=webp&s=28f772427d2b9127531a1d463856bf210496fb66';
+  const avatarUrl =
+    userData.avatars && userData.avatars.$values && userData.avatars.$values.length > 0
+      ? userData.avatars.$values[0]
+      : 'https://randomuser.me/api/portraits/men/1.jpg';
 
-  // Define tag configurations for each data field
   const tagConfigs = [
-    ...userData.studyPreferences.$values.map((pref, index) => ({
+    ...(userData.studyPreferences.$values || []).map((pref: string, index: number) => ({
       key: `studyPreference_${index}`,
       value: pref,
       icon: 'book',
       color: '#F97316',
     })),
-    ...(userData.studyPreferences.$values.length === 0
+    ...(userData.studyPreferences.$values?.length === 0 || !userData.studyPreferences
       ? [{
-          key: 'studyPreference',
-          value: 'No info',
-          icon: 'info-circle',
-          color: '#F59E0B',
-        }]
+        key: 'studyPreference',
+        value: 'No info',
+        icon: 'info-circle',
+        color: '#F59E0B',
+      }]
       : []),
-    ...userData.subjects.$values.map((subject, index) => ({
+    ...(userData.subjects.$values || []).map((subject: string, index: number) => ({
       key: `subject_${index}`,
       value: subject,
       icon: 'pencil',
       color: '#10B981',
     })),
-    ...(userData.subjects.$values.length === 0
+    ...(userData.subjects.$values?.length === 0 || !userData.subjects
       ? [{
-          key: 'subject',
-          value: 'No info',
-          icon: 'info-circle',
-          color: '#EC4899',
-        }]
+        key: 'subject',
+        value: 'No info',
+        icon: 'info-circle',
+        color: '#EC4899',
+      }]
       : []),
   ];
 
@@ -152,20 +204,21 @@ const ProfileScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Avatar */}
           <Animated.View style={[styles.avatarWrapper, { transform: [{ scale: isLoading ? 0 : scaleAnim }] }]}>
-            <LinearGradient
-              colors={['#3B82F6', '#1D4ED8']}
-              style={styles.avatarBorder}
-            >
-              <Image
-                source={{ uri: avatarUrl }}
-                style={styles.avatar}
-              />
-            </LinearGradient>
+            <TouchableOpacity onPress={handleAvatarPress}>
+              <LinearGradient
+                colors={['#3B82F6', '#1D4ED8']}
+                style={styles.avatarBorder}
+              >
+                <Image
+                  source={{ uri: avatarUrl }}
+                  style={styles.avatar}
+                />
+              </LinearGradient>
+            </TouchableOpacity>
           </Animated.View>
 
-          {/* Profile Card */}
+
           <LinearGradient
             colors={['#FFFFFF', '#F8FAFC']}
             style={styles.card}
@@ -182,9 +235,8 @@ const ProfileScreen: React.FC = () => {
               {isLoading ? 'Loading...' : userData.bio}
             </Text>
 
-            {/* Tags */}
             <View style={styles.tagsContainer}>
-              {isLoading ? null : tagConfigs.map((tag, index) => (
+              {isLoading ? null : tagConfigs.map((tag) => (
                 <TouchableOpacity
                   key={tag.key}
                   style={[styles.tag, { backgroundColor: `${tag.color}22` }]}
@@ -195,7 +247,6 @@ const ProfileScreen: React.FC = () => {
               ))}
             </View>
 
-            {/* Update Button */}
             <TouchableOpacity
               onPress={() => console.log('Update Profile')}
               activeOpacity={0.85}
@@ -211,6 +262,8 @@ const ProfileScreen: React.FC = () => {
                 </View>
               </LinearGradient>
             </TouchableOpacity>
+
+
             <TouchableOpacity
               onPress={handleLogout}
               style={styles.logoutButton}
@@ -221,7 +274,6 @@ const ProfileScreen: React.FC = () => {
           </LinearGradient>
         </ScrollView>
 
-        {/* Bottom Navbar */}
         <View style={styles.bottomNavbarContainer}>
           <BottomNavbar />
         </View>
@@ -240,7 +292,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     alignItems: 'center',
-    paddingBottom: 100, // Space for bottom navbar
+    paddingBottom: 100,
   },
   avatarWrapper: {
     position: 'absolute',
@@ -317,6 +369,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     margin: 6,
   },
+  changeAvatarButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#1D4ED8',
+  },
+  changeAvatarText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+  },
+
   tagIcon: {
     marginRight: 8,
   },
