@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
@@ -45,12 +46,79 @@ type UserDetailRouteProp = RouteProp<
 const UserDetail: React.FC = () => {
   const route = useRoute<UserDetailRouteProp>();
   const { friend, onAccept, onReject, onGoBack } = route.params;
+  const [isLoading, setIsLoading] = useState(false);
 
   const getSafeValue = (value: string | undefined, defaultValue = 'Not specified') =>
     value || defaultValue;
 
   const getSafeArray = (array: string[] | undefined, defaultValue = 'No info') =>
     array && array.length > 0 ? array.join(', ') : defaultValue;
+
+const handleAccept = async () => {
+  setIsLoading(true);
+  try {
+    const formData = new FormData();
+    formData.append('recipientId', friend.id);
+
+    const response = await fetch('http://192.168.10.233:7187/api/FriendRequest/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+
+    let responseText = await response.text(); // Get raw response as text
+    let responseData: { message?: string; detail?: string } = {};
+
+    // Try to parse as JSON if it looks like JSON
+    if (responseText && responseText.trim().startsWith('{')) {
+      responseData = JSON.parse(responseText);
+    } else {
+      responseData = { message: responseText || 'Success' };
+    }
+
+    if (!response.ok) {
+      const errorMessage = responseData.detail || responseData.message || `HTTP error! Status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    Alert.alert('Success', responseData.message || 'Friend request sent successfully!');
+    onAccept();
+  } catch (error: any) {
+    let userMessage = 'An unexpected error occurred. Please try again.';
+    let responseData: { message?: string } = {};
+    const errorDetails = {
+      message: error.message || 'Unknown error',
+      name: error.name || 'Error',
+      stack: error.stack || 'No stack trace available',
+      timestamp: new Date().toISOString(),
+      recipientId: friend.id,
+    };
+
+    console.error('you had sent a friend request to this user already:', JSON.stringify(errorDetails, null, 2));
+
+    if (error.message.includes('Network request failed')) {
+      userMessage = 'Network error. Please check your internet connection and try again.';
+    } else if (error.message.includes('400') && error.message === 'Friend request already exists.') {
+      userMessage = 'This friend request already exists. No action was taken.';
+    } else if (error.message.includes('401')) {
+      userMessage = 'Authentication failed. Please log in again.';
+    } else if (error.message.includes('403')) {
+      userMessage = 'You do not have permission to send this request.';
+    } else if (error.message.includes('409')) {
+      userMessage = 'Friend request already sent or user is already a friend.';
+    } else if (error.message.includes('500')) {
+      userMessage = 'Server error. Please try again later.';
+    } else if (error.name === 'SyntaxError') {
+      userMessage = 'Server returned an unexpected response format.';
+    }
+
+    Alert.alert('Error', responseData.message || userMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <LinearGradient
@@ -115,9 +183,13 @@ const UserDetail: React.FC = () => {
               <FontAwesome name="times" size={20} color="#FFF" />
               <Text style={styles.buttonLabel}>Reject</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
+            <TouchableOpacity
+              style={[styles.acceptButton, isLoading && styles.disabledButton]}
+              onPress={handleAccept}
+              disabled={isLoading}
+            >
               <FontAwesome name="check" size={20} color="#FFF" />
-              <Text style={styles.buttonLabel}>Accept</Text>
+              <Text style={styles.buttonLabel}>{isLoading ? 'Sending...' : 'Accept'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -266,6 +338,10 @@ const styles = StyleSheet.create({
     shadowColor: 'lightgreen',
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+  disabledButton: {
+    backgroundColor: '#A3E635',
+    opacity: 0.6,
   },
   buttonLabel: {
     color: '#FFF',
