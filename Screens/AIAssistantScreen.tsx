@@ -58,7 +58,7 @@ const AIAssistantScreen: React.FC = () => {
         formData.append('SessionId', sessionId || '');
         formData.append('Prompt', inputText);
 
-        const response = await fetch('http://172.16.1.107:7187/api/AIChat/send-message', {
+        const response = await fetch('http://192.168.88.147:7187/api/AIChat/send-message', {
           method: 'POST',
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -141,7 +141,7 @@ const AIAssistantScreen: React.FC = () => {
           type: uploadedFile.mimeType || 'application/octet-stream',
         } as any);
 
-        const response = await fetch('http://localhost:7187/api/AIChat/send-message', {
+        const response = await fetch('http://192.168.88.147:7187/api/AIChat/send-message', {
           method: 'POST',
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -228,7 +228,7 @@ const AIAssistantScreen: React.FC = () => {
         >
           {messages.map((message) => (
             <View
-              key={message.id}
+              key={message.id.toString()} // Ensure unique key using the id
               style={[
                 styles.messageBubble,
                 message.isUser ? styles.userBubble : styles.aiBubble,
@@ -322,8 +322,8 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-        marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
-    
+    marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+
   },
   header: {
     position: 'absolute',
@@ -359,27 +359,29 @@ const styles = StyleSheet.create({
     paddingBottom: 150,
   },
   messageBubble: {
-    maxWidth: width * 0.7,
-    padding: 14,
+    maxWidth: width * 0.75,
+    padding: 12,
     borderRadius: 20,
-    marginVertical: 6,
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
   },
   userBubble: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#4F46E5', // Deeper blue for user messages
     alignSelf: 'flex-end',
   },
   aiBubble: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6', // Lighter gray for AI messages
     alignSelf: 'flex-start',
   },
   messageText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#1F2937', // Darker text for better readability
     fontFamily: 'Poppins-Regular',
+    lineHeight: 22, // Improved line spacing
+    textAlign: 'left', // Ensure text wraps neatly
   },
   typingIndicator: {
     flexDirection: 'row',

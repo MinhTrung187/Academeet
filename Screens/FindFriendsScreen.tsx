@@ -1,279 +1,343 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Image,
-  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavbar from '../Component/BottomNavbar';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import HeaderComponent from '../Component/HeaderComponent';
-import axios from 'axios';
+import BottomNavbar from '../Component/BottomNavbar';
+import axios, { AxiosResponse, CancelTokenSource } from 'axios';
+import CardStack from '../Component/CardStack';
+import RequestList from '../Component/RequestList';
+
+interface FriendRequest {
+  $id: string;
+  senderId: string;
+  senderName: string;
+  recipientId: string;
+  recipientName: string;
+  sentAt: string;
+  status: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  age: number;
+  bio?: string;
+  occupation?: string;
+  educationLevel?: string;
+  studyPreferences: string[] | { $values: string[] };
+  subjects: string[] | { $values: string[] };
+  avatars: string[] | { $values: string[] };
+}
+
+const API_BASE_URL = 'http://192.168.10.233:7187/api';
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+const { width, height } = Dimensions.get('window');
 
 const FindFriendsScreen = () => {
-  const [selectedFilter, setSelectedFilter] = useState('Near me');
-  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<'find' | 'requests'>('find');
-  const [friendRequests, setFriendRequests] = useState<
-    Array<{
-      $id: string;
-      senderId: string;
-      senderName: string;
-      recipientId: string;
-      recipientName: string;
-      sentAt: string;
-      status: string;
-    }>
-  >([]);
-  const [users, setUsers] = useState<
-    Array<{
-      id: string;
-      name: string;
-      age: number;
-      bio?: string;
-      occupation?: string;
-      educationLevel?: string;
-      studyPreferences: { $values: string[] };
-      subjects: { $values: string[] };
-      avatars: { $values: string[] };
-    }>
-  >([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
+  const cancelTokenSourceRef = useRef<CancelTokenSource | null>(null);
+
+  const fetchCurrentUser = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
+      cancelTokenSourceRef.current = axios.CancelToken.source();
+      const response: AxiosResponse<User> = await axiosInstance.get('/User/current-user', {
+        cancelToken: cancelTokenSourceRef.current.token,
+      });
+      setCurrentUser(response.data);
+    } catch (err) {
+      if (axios.isCancel(err)) return;
+      console.error('Error fetching current user:', err);
+      setError('Failed to load current user. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchFriendRequests = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
+      cancelTokenSourceRef.current = axios.CancelToken.source();
+      const response: AxiosResponse<any> = await axiosInstance.get('/FriendRequest/received', {
+        cancelToken: cancelTokenSourceRef.current.token,
+      });
+      const data = response.data;
+      let requests: FriendRequest[] = [];
+      if (Array.isArray(data)) {
+        requests = data.map((item) => ({
+          $id: item.$id || item.sender.id,
+          senderId: item.sender.id,
+          senderName: item.sender.name,
+          recipientId: item.recipient.id,
+          recipientName: item.recipient.name,
+          sentAt: item.sentAt,
+          status: item.status,
+        }));
+      } else if (data && typeof data === 'object') {
+        requests = [{
+          $id: data.$id || data.sender.id,
+          senderId: data.sender.id,
+          senderName: data.sender.name,
+          recipientId: data.recipient.id,
+          recipientName: data.recipient.name,
+          sentAt: data.sentAt,
+          status: data.status,
+        }];
+      }
+      setFriendRequests(requests);
+    } catch (err) {
+      if (axios.isCancel(err)) return;
+      console.error('Error fetching friend requests:', err);
+      setError('Failed to load friend requests. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
+      cancelTokenSourceRef.current = axios.CancelToken.source();
+      const response = await axiosInstance.get('/User/users', {
+        cancelToken: cancelTokenSourceRef.current.token,
+      });
+      const allUsers = Array.isArray(response.data) ? response.data : response.data.$values || [];
+      const validUsers = allUsers.filter((user: User) => user && user.id && user.age > 0 && user.age < 150);
+      const filteredUsers = currentUser ? validUsers.filter((user: User) => user.id !== currentUser.id) : validUsers;
+      setUsers(filteredUsers);
+      console.log('Fetched users:', filteredUsers);
+      // Nếu không có user, thử fetch lại sau một khoảng thời gian
+      if (filteredUsers.length === 0) {
+        setTimeout(() => fetchUsers(), 5000); // Thử lại sau 5 giây
+      }
+    } catch (err) {
+      if (axios.isCancel(err)) return;
+      console.error('Error fetching users:', err);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
+
+  const handleSwipeRight = useCallback(
+    async (user: User) => {
+      setIsLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append('recipientId', user.id);
+        await axiosInstance.post('/FriendRequest/send', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        Alert.alert('Success', 'Friend request sent successfully!');
+        setUsers((prev) => {
+          const newUsers = prev.filter((u) => u.id !== user.id);
+          // Nếu danh sách user rỗng, fetch lại
+          if (newUsers.length === 0) {
+            fetchUsers();
+          }
+          return newUsers;
+        });
+      } catch (error: any) {
+        let userMessage = 'Failed to send friend request. Please try again.';
+        if (error.response?.status === 400 && error.response.data?.detail === 'Friend request already exists.') {
+          userMessage = 'Friend request already sent.';
+        }
+        Alert.alert('Error', userMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [fetchUsers]
+  );
+
+  const handleSwipeLeft = useCallback(
+    (user: User) => {
+      console.log(`Skipped user: ${user.name}`);
+      setUsers((prev) => {
+        const newUsers = prev.filter((u) => u.id !== user.id);
+        // Nếu danh sách user rỗng, fetch lại
+        if (newUsers.length === 0) {
+          fetchUsers();
+        }
+        return newUsers;
+      });
+    },
+    [fetchUsers]
+  );
 
   const handleRequestAction = async (requestId: string, action: 'accept' | 'reject') => {
     try {
-      await axios.post(`/api/FriendRequest/${action}`, { requestId });
+      let response;
+      if (action === 'accept') {
+        const formData = new FormData();
+        formData.append('senderId', requestId);
+        response = await axiosInstance.post('/FriendRequest/accept', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        response = await axiosInstance.post('/FriendRequest/reject', { requestId });
+      }
       setFriendRequests((prev) =>
-        prev.map((r) =>
-          r.$id === requestId ? { ...r, status: action === 'accept' ? 'Accepted' : 'Rejected' } : r
-        )
+        prev.map((r) => (r.$id === requestId ? { ...r, status: action === 'accept' ? 'Accepted' : 'Rejected' } : r))
       );
+      Alert.alert('Success', `Friend request ${action}ed successfully!`);
     } catch (error) {
       console.error(`Error ${action}ing friend request:`, error);
+      Alert.alert('Error', `Failed to ${action} friend request. Please try again.`);
     }
   };
 
-  useEffect(() => {
-    const fetchFriendRequests = async () => {
-      try {
-        const response = await axios.get('http://172.16.1.117:7187/api/FriendRequest/received');
-        if (response.data.$values) {
-          setFriendRequests(response.data.$values);
-        }
-      } catch (error) {
-        console.error('Error fetching friend requests:', error);
-      }
-    };
-
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get('http://172.16.1.117:7187/api/User/users');
-        if (response.data.$values) {
-          setUsers(response.data.$values);
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-      }
-    };
-
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     if (activeTab === 'requests') {
-      fetchFriendRequests();
+      fetchFriendRequests().then(() => setRefreshing(false));
     } else {
-      fetchUsers();
+      const fetchPromises = currentUser ? [fetchUsers()] : [fetchCurrentUser(), fetchUsers()];
+      Promise.all(fetchPromises).then(() => setRefreshing(false));
     }
-  }, [activeTab]);
+  }, [activeTab, fetchFriendRequests, fetchCurrentUser, fetchUsers, currentUser]);
 
-  const filters = ['Near me', 'Related Field', 'Hobbies', 'Study'];
-
-const handleCardPress = (userId: string) => {
-  const user = users.find((u) => u.id === userId);
-  if (user) {
-    //@ts-ignore
-    navigation.navigate('UserDetail', {
-      friend: {
-        id: user.id,
-        name: user.name,
-        age: user.age,
-        bio: user.bio || 'No bio available',
-        field: user.occupation || 'Unknown',
-        avatar: user.avatars.$values[0] || 'https://randomuser.me/api/portraits/lego/1.jpg',
-        online: true, // API does not provide online status, default to true
-        time: user.studyPreferences?.$values[0] || 'Unknown',
-        activity: user.studyPreferences?.$values[1] || 'Unknown',
-        level: user.educationLevel || 'Unknown',
-        group: user.studyPreferences?.$values.includes('Discussion-based') ? 'Team' : 'Solo',
-        studyPreferences: user.studyPreferences?.$values || [], // Ensure array
-        subjects: user.subjects?.$values || [], // Ensure array
-      },
-      onAccept: () => {
-        console.log('Accepted:', user.name);
-        navigation.goBack();
-      },
-      onReject: () => {
-        console.log('Rejected:', user.name);
-        navigation.goBack();
-      },
-      onGoBack: () => navigation.goBack(),
-    });
-  }
-};
-
-  return (
-    <>
-      <LinearGradient colors={['#E6F0FA', '#C1E0FC', '#A3BFFA']} style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <HeaderComponent />
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'find' && styles.activeTab]}
-              onPress={() => setActiveTab('find')}
-            >
-              <Text style={[styles.tabText, activeTab === 'find' && styles.activeTabText]}>
-                Find Friends
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
-              onPress={() => setActiveTab('requests')}
-            >
-              <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
-                Friend Requests
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <View style={{ flex: 1 }}>
-            {activeTab === 'find' ? (
-              <>
-                <View style={styles.filterContainer}>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingHorizontal: 10 }}
-                  >
-                    {filters.map((filter, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.filterButton,
-                          selectedFilter === filter && styles.activeFilter,
-                        ]}
-                        onPress={() => setSelectedFilter(filter)}
-                      >
-                        <Text
-                          style={[
-                            styles.filterText,
-                            selectedFilter === filter && styles.activeFilterText,
-                          ]}
-                        >
-                          {filter}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-                <ScrollView style={styles.cardContainer} contentContainerStyle={{ paddingBottom: 20 }}>
-                  {users.map((user) => (
-                    <TouchableOpacity
-                      key={user.id}
-                      style={styles.card}
-                      onPress={() => handleCardPress(user.id)}
-                    >
-                      <View style={[styles.cardInner, { backgroundColor: '#F9FEFF' }]}>
-                        <View style={styles.avatarContainer}>
-                          <View style={styles.avatarBox}>
-                            <Image
-                              source={{
-                                uri: user.avatars.$values[0] || 'https://randomuser.me/api/portraits/lego/1.jpg',
-                              }}
-                              style={styles.avatar}
-                            />
-                          </View>
-                        </View>
-                        <View style={styles.infoContainer}>
-                          <Text style={styles.cardName}>{user.name}</Text>
-                          <Text style={styles.cardSub}>{user.age}, "12km from you"</Text>
-                          <View style={styles.row}>
-                            <FontAwesome name="gift" size={14} color="#EF5DA8" style={{ marginRight: 6 }} />
-                            <Text style={styles.cardField}>{user.occupation || 'Unknown'}</Text>
-                          </View>
-                          <View style={styles.row}>
-                            <FontAwesome name="eye" size={14} color="#10B981" style={{ marginRight: 6 }} />
-                            <Text style={[styles.statusText, { color: '#10B981' }]}>Online</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            ) : (
-              <ScrollView style={styles.cardContainer} contentContainerStyle={{ paddingBottom: 20 }}>
-                <Text style={styles.sectionTitle}>Friend Requests</Text>
-                {friendRequests.map((request) => (
-                  <View key={request.$id} style={styles.requestCard}>
-                    <View style={styles.requestHeader}>
-                      <Image
-                        source={{ uri: `https://api.adorable.io/avatars/50/${request.senderId}` }}
-                        style={styles.requestAvatar}
-                      />
-                      <View style={styles.requestInfo}>
-                        <Text style={styles.requestName}>{request.senderName}</Text>
-                        <Text style={styles.requestTime}>
-                          {new Date(request.sentAt).toLocaleString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.requestActions}>
-                      {request.status === 'Pending' && (
-                        <>
-                          <TouchableOpacity
-                            style={styles.actionButton}
-                            onPress={() => handleRequestAction(request.$id, 'accept')}
-                          >
-                            <Text style={styles.actionText}>Accept</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.actionButton, styles.rejectButton]}
-                            onPress={() => handleRequestAction(request.$id, 'reject')}
-                          >
-                            <Text style={styles.actionText}>Reject</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
-                      {request.status !== 'Pending' && (
-                        <Text style={styles.requestStatus}>{request.status}</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-      <BottomNavbar />
-    </>
+  // Tải lại dữ liệu khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Screen focused, activeTab:', activeTab, 'users length:', users.length);
+      if (activeTab === 'find' && users.length === 0) {
+        fetchUsers();
+      }
+    }, [activeTab, fetchUsers, users.length])
   );
-};
+
+  useEffect(() => {
+    console.log('useEffect triggered, activeTab:', activeTab, 'currentUser:', currentUser, 'users.length:', users.length);
+    const fetchData = async () => {
+      console.log('fetchData started');
+      if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
+      cancelTokenSourceRef.current = axios.CancelToken.source();
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (activeTab === 'requests') {
+          console.log('Fetching friend requests');
+          await fetchFriendRequests();
+        } else {
+          if (!currentUser) {
+            console.log('Fetching current user');
+            await fetchCurrentUser();
+          }
+          if (users.length === 0) {
+            console.log('Fetching users');
+            await fetchUsers();
+          }
+        }
+      } catch (err) {
+        if (!axios.isCancel(err)) {
+          console.error('fetchData error:', err);
+          setError('Failed to load data. Please try again.');
+        }
+      } finally {
+        console.log('fetchData finished, setting isLoading to false');
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+    return () => {
+      console.log('Cleaning up useEffect');
+      if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('Component unmounted');
+    };
+  }, [activeTab, fetchFriendRequests, fetchCurrentUser, fetchUsers, currentUser, users.length]);
+
+return (
+  <LinearGradient colors={['#A3BFFA', '#E6F0FA']} style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <HeaderComponent />
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'find' && styles.activeTab]}
+          onPress={() => setActiveTab('find')}
+        >
+          <Text style={[styles.tabText, activeTab === 'find' && styles.activeTabText]}>Find Friends</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+          onPress={() => setActiveTab('requests')}
+        >
+          <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>Friend Requests</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.content}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4A90E2" />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => (activeTab === 'requests' ? fetchFriendRequests() : fetchUsers())}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : activeTab === 'find' ? (
+          users.length === 0 ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.noDataText}>No users found.</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={fetchUsers}>
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <CardStack users={users} onSwipeRight={handleSwipeRight} onSwipeLeft={handleSwipeLeft} />
+          )
+        ) : (
+          <RequestList
+            requests={friendRequests}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            onAction={handleRequestAction}
+          />
+        )}
+      </View>
+    </SafeAreaView>
+    <BottomNavbar />
+  </LinearGradient>
+);
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -282,197 +346,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#4A90E2',
-  },
-  tabText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-  },
-  activeTabText: {
-    color: '#4A90E2',
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  filterContainer: {
-    paddingVertical: 8,
-    backgroundColor: 'transparent',
-  },
-  filterButton: {
-    height: 38,
-    paddingHorizontal: 18,
-    borderRadius: 19,
-    backgroundColor: '#F5F7FA',
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-  },
-  activeFilter: {
-    backgroundColor: '#4A90E2',
-    borderColor: '#4A90E2',
-  },
-  filterText: {
-    fontSize: 15,
-    color: '#374151',
-    fontFamily: 'Poppins-Regular',
-  },
-  activeFilterText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  cardContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 60,
-  },
-  card: {
-    marginBottom: 15,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#E1F3FF',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  cardInner: {
-    flexDirection: 'row',
-    padding: 12,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  avatarContainer: {
-    padding: 6,
-  },
-  avatarBox: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#FFEDD5',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-  infoContainer: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  cardName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    fontFamily: 'Poppins-Bold',
-  },
-  cardSub: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-    fontFamily: 'Poppins-Regular',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  cardField: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#4B5563',
-    fontFamily: 'Poppins-Medium',
-  },
-  statusText: {
-    fontSize: 13,
-    fontFamily: 'Poppins-Regular',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    paddingHorizontal: 15,
-    marginVertical: 10,
-    fontFamily: 'Poppins-Bold',
-  },
-  requestCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 15,
-    padding: 12,
-    marginHorizontal: 15,
-    marginBottom: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  requestHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  requestAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  requestInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  requestName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  requestTime: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-  },
-  requestActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  actionButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#4A90E2',
-    borderRadius: 8,
-    marginLeft: 10,
-  },
-  rejectButton: {
-    backgroundColor: '#EF4444',
-  },
-  actionText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: 'Poppins-Medium',
-  },
-  requestStatus: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-    textAlign: 'right',
-  },
+  tab: { paddingVertical: 8, paddingHorizontal: 20 },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: '#4A90E2' },
+  tabText: { fontSize: 16, color: '#6B7280', fontFamily: 'Poppins-Regular' },
+  activeTabText: { color: '#4A90E2', fontWeight: '600', fontFamily: 'Poppins-SemiBold' },
+  content: { flex: 1, padding: 20 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 16, color: '#4A90E2', fontFamily: 'Poppins-Regular' },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  errorText: { fontSize: 16, color: '#EF4444', textAlign: 'center', marginBottom: 20, fontFamily: 'Poppins-Regular' },
+  retryButton: { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#4A90E2', borderRadius: 8 },
+  retryButtonText: { color: '#FFF', fontSize: 16, fontFamily: 'Poppins-Medium' },
+  noDataText: { fontSize: 16, color: '#6B7280', textAlign: 'center', marginTop: 20, fontFamily: 'Poppins-Regular' },
 });
 
 export default FindFriendsScreen;

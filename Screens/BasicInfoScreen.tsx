@@ -7,14 +7,14 @@ const { width } = Dimensions.get('window');
 
 // Định nghĩa interface cho dữ liệu từ API
 interface Item {
-    $id: string;
+    $id?: string; // Optional, as some APIs might not return $id
     id: number;
     name: string;
 }
 
 interface ApiResponse {
-    $id: string;
-    $values: Item[];
+    $id?: string;
+    $values?: Item[];
 }
 
 // Định nghĩa interface cho options
@@ -23,6 +23,7 @@ interface Option {
     value: string;
     icon: string;
 }
+
 interface CurrentUser {
     name: string;
     middleName: string;
@@ -41,33 +42,45 @@ const iconMapping: Record<string, string> = {
     Designer: 'paint-brush',
     Unemployed: 'user',
     Other: 'question-circle',
-    'Solo': 'user',
+    Solo: 'user',
     'Small Group': 'users',
     'Large Group': 'group',
-    'Beginner': 'graduation-cap',
-    'Intermediate': 'book',
-    'Advanced': 'certificate',
+    Beginner: 'graduation-cap',
+    Intermediate: 'book',
+    Advanced: 'certificate',
 };
 
-const generateValue = (name: string): string => {
-    return name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '')
-        .replace(/\s+/g, '');
-};
-
-// Hàm lấy dữ liệu từ API
+// Hàm lấy dữ liệu từ API với xử lý lỗi cải tiến
 const fetchOptions = async (url: string): Promise<Option[]> => {
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        const data: ApiResponse = await response.json();
-        const items = data.$values;
-        return items.map((item: Item) => ({
-            label: item.name,
-            value: item.id.toString(), // Sử dụng id từ API làm value
-            icon: iconMapping[item.name] ?? 'question',
-        }));
+        console.log(`Response status for ${url}:`, response.status, response.statusText); // Log status
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}, Status Text: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log(`Response data for ${url}:`, JSON.stringify(data, null, 2)); // Log raw response
+
+        let items: Item[] = [];
+        if (Array.isArray(data)) {
+            // Handle flat array response
+            items = data;
+        } else if (data.$values && Array.isArray(data.$values)) {
+            // Handle $values structure
+            items = data.$values;
+        } else {
+            console.error(`Unexpected response format for ${url}:`, data);
+            return [];
+        }
+
+        // Validate items
+        return items
+            .filter((item): item is Item => item && typeof item.id === 'number' && typeof item.name === 'string')
+            .map((item: Item) => ({
+                label: item.name,
+                value: item.id.toString(),
+                icon: iconMapping[item.name] ?? 'question',
+            }));
     } catch (error) {
         console.error(`Error fetching from ${url}:`, error);
         return [];
@@ -76,113 +89,123 @@ const fetchOptions = async (url: string): Promise<Option[]> => {
 
 const BasicInfoScreen: React.FC = () => {
     const [step, setStep] = useState<number>(1);
-    const [selected, setSelected] = useState<string | null>(null);
-    const [name, setName] = useState<string>('');
-    const [age, setAge] = useState<string>('');
-    const [occupation, setOccupation] = useState<string>('');
-    const [studyStyle, setStudyStyle] = useState<string | null>(null);
-    const [experience, setExperience] = useState<string | null>(null);
-    const [studyPreferences, setStudyPreferences] = useState<Option[]>([]); // Dữ liệu từ API
-    const [educationLevels, setEducationLevels] = useState<Option[]>([]); // Dữ liệu từ API
-    const [selectedPreference, setSelectedPreference] = useState<string | null>(null); // Lựa chọn study preference
-    const [selectedEducationLevel, setSelectedEducationLevel] = useState<string | null>(null); // Lựa chọn education level
-    const [studyPreferencesSelected, setStudyPreferencesSelected] = useState<string[]>([]); // Sử dụng mảng để chọn nhiều  const [subjectExperiences, setSubjectExperiences] = useState<{ subject: string; level: string }[]>([]);
-    const [newSubject, setNewSubject] = useState('');
-    const [newLevel, setNewLevel] = useState('');
-    const [options, setOptions] = useState<Option[]>([]); // Dữ liệu từ step 1
-    const [loading, setLoading] = useState<boolean>(true); // Thêm state loading
-    const [error, setError] = useState<string | null>(null); // Thêm state error
+    const [selected, setSelected] = useState<string | null>(null); // Occupation
+    const [name, setName] = useState<string>(''); // Gender Identity
+    const [age, setAge] = useState<string>(''); // Not used in current code
+    const [occupation, setOccupation] = useState<string>(''); // Bio
+    const [studyStyle, setStudyStyle] = useState<string | null>(null); // Not used
+    const [experience, setExperience] = useState<string | null>(null); // Not used
+    const [studyPreferences, setStudyPreferences] = useState<Option[]>([]);
+    const [educationLevels, setEducationLevels] = useState<Option[]>([]);
+    const [selectedPreference, setSelectedPreference] = useState<string | null>(null); // Not used
+    const [selectedEducationLevel, setSelectedEducationLevel] = useState<string | null>(null);
+    const [studyPreferencesSelected, setStudyPreferencesSelected] = useState<string[]>([]);
+    const [subjectExperiences, setSubjectExperiences] = useState<{ subject: string; level: string }[]>([]);
+    const [newSubject, setNewSubject] = useState(''); // Not used
+    const [newLevel, setNewLevel] = useState(''); // Not used
+    const [options, setOptions] = useState<Option[]>([]); // Occupations
+    const [genderOptions, setGenderOptions] = useState<Option[]>([]);
+    const [subjectOptions, setSubjectOptions] = useState<Option[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [errors, setErrors] = useState<Record<string, string | null>>({
+        genderOptions: null,
+        studyPreferences: null,
+        educationLevels: null,
+        subjectOptions: null,
+        occupationOptions: null,
+        currentUser: null,
+    });
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const navigation = useNavigation<any>();
 
-
-    // Lấy dữ liệu từ API khi component mount
-    // Cập nhật useEffect để bao gồm API GenderIdentity
-    const [genderOptions, setGenderOptions] = useState<Option[]>([]);
-    const [subjectExperiences, setSubjectExperiences] = useState<{ subject: string; level: string }[]>([]);
-    const [subjectOptions, setSubjectOptions] = useState<Option[]>([]);
-
-    // Cập nhật useEffect
+    // Fetch data on component mount
     useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                const [prefs, levels, genderOptions, subjectOptions, currentUserData] = await Promise.all([
-                    fetchOptions('http://172.16.1.117:7187/api/StudyPreference'),
-                    fetchOptions('http://172.16.1.117:7187/api/EducationLevel'),
-                    fetchOptions('http://172.16.1.117:7187/api/GenderIdentity'),
-                    fetchOptions('http://172.16.1.117:7187/api/Subject'),
-                    fetch('http://172.16.1.117:7187/api/User/current-user').then(res => res.json()),
-                ]);
-                setStudyPreferences(prefs);
-                setEducationLevels(levels);
-                setGenderOptions(genderOptions);
-                setSubjectOptions(subjectOptions);
-                setCurrentUser(currentUserData); // Lưu dữ liệu người dùng hiện tại
-                const initialOptions = await fetchOptions('http://172.16.1.117:7187/api/Occupation');
-                setOptions(initialOptions);
-            } catch (err) {
-                setError('Failed to load options');
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
+        setLoading(true);
+        setErrors({
+            genderOptions: null,
+            studyPreferences: null,
+            educationLevels: null,
+            subjectOptions: null,
+            occupationOptions: null,
+            currentUser: null,
+        });
+
+        Promise.all([
+            fetchOptions('http://192.168.88.147:7187/api/StudyPreference')
+                .then(setStudyPreferences)
+                .catch((err) => setErrors((prev) => ({ ...prev, studyPreferences: err.message }))),
+            fetchOptions('http://192.168.88.147:7187/api/EducationLevel')
+                .then(setEducationLevels)
+                .catch((err) => setErrors((prev) => ({ ...prev, educationLevels: err.message }))),
+            fetchOptions('http://192.168.88.147:7187/api/GenderIdentity')
+                .then(setGenderOptions)
+                .catch((err) => setErrors((prev) => ({ ...prev, genderOptions: err.message }))),
+            fetchOptions('http://192.168.88.147:7187/api/Subject')
+                .then(setSubjectOptions)
+                .catch((err) => setErrors((prev) => ({ ...prev, subjectOptions: err.message }))),
+            fetchOptions('http://192.168.88.147:7187/api/Occupation')
+                .then(setOptions)
+                .catch((err) => setErrors((prev) => ({ ...prev, occupationOptions: err.message }))),
+            fetch('http://192.168.88.147:7187/api/User/current-user')
+                .then((res) => res.json())
+                .then(setCurrentUser)
+                .catch((err) => setErrors((prev) => ({ ...prev, currentUser: err.message }))),
+        ]).finally(() => setLoading(false));
     }, []);
+
     const getIdFromValue = (value: string, options: Option[]): number => {
-  const option = options.find(opt => opt.value === value);
-  return option ? parseInt(option.value) : 0; // value là id từ API
-};
+        const option = options.find((opt) => opt.value === value);
+        return option ? parseInt(option.value) : 0;
+    };
 
-const HandleFinish = async () => {
-  if (!currentUser) {
-    console.error('Current user data not loaded');
-    return;
-  }
+    const HandleFinish = async () => {
+        if (!currentUser) {
+            console.error('Current user data not loaded');
+            return;
+        }
 
-  // Tách name từ currentUser
-  const nameParts = currentUser.name.split(' ');
-  const userData = {
-    firstName: nameParts[0] || '', // "Trung"
-    lastName: nameParts[nameParts.length - 1] || '', // "Nguyen"
-    middleName: nameParts.slice(1, -1).join(' ') || '', // Rỗng nếu không có middle name
-    dateOfBirth: '2003-06-12', // Xóa giá trị mặc định không hợp lệ
-    bio: occupation || '', // Từ step 3
-    occupationId: getIdFromValue(selected || '', options), // Từ step 1, dùng value trực tiếp
-    genderIdentityId: getIdFromValue(name || '', genderOptions), // Từ step 4, dùng value trực tiếp
-    educationLevelId: getIdFromValue(selectedEducationLevel || '', educationLevels), // Từ step 2, dùng value trực tiếp
-    studyPreferenceIds: studyPreferencesSelected.map(pref => getIdFromValue(pref, studyPreferences)), // Từ step 2
-    subjectIds: subjectExperiences.map(item => getIdFromValue(item.subject, subjectOptions)), // Từ step 5
-  };
+        const nameParts = currentUser.name.split(' ');
+        const userData = {
+            firstName: nameParts[0] || '',
+            lastName: nameParts[nameParts.length - 1] || '',
+            middleName: nameParts.slice(1, -1).join(' ') || '',
+            dateOfBirth: currentUser.dateOfBirth || '2003-06-12',
+            bio: occupation || '',
+            occupationId: getIdFromValue(selected || '', options),
+            genderIdentityId: getIdFromValue(name || '', genderOptions),
+            educationLevelId: getIdFromValue(selectedEducationLevel || '', educationLevels),
+            studyPreferenceIds: studyPreferencesSelected.map((pref) => getIdFromValue(pref, studyPreferences)),
+            subjectIds: subjectExperiences.map((item) => getIdFromValue(item.subject, subjectOptions)),
+        };
 
-  console.log('Sending user data:', userData); // Debug dữ liệu gửi đi
+        console.log('Sending user data:', userData);
 
-  try {
-    const response = await fetch('http://172.16.1.117:7187/api/user', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        // Thêm header Authorization nếu cần
-        // 'Authorization': `Bearer ${yourToken}`,
-      },
-      body: JSON.stringify(userData),
-    });
+        try {
+            const response = await fetch('http://192.168.88.147:7187/api/user', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add Authorization header if needed
+                    // 'Authorization': `Bearer ${yourToken}`,
+                },
+                body: JSON.stringify(userData),
+            });
 
-    const responseData = await response.text(); // Lấy toàn bộ phản hồi
-    if (response.ok) {
-      console.log('User information updated successfully:', userData);
-      navigation.navigate('FinishedInfo');
-    } else {
-      console.error('Failed to update user information:', {
-        status: response.status,
-        statusText: response.statusText,
-        responseData: responseData,
-      });
-    }
-  } catch (error) {
-    console.error('Error updating user information:', error);
-  }
-};
+            const responseData = await response.text();
+            if (response.ok) {
+                console.log('User information updated successfully:', userData);
+                navigation.navigate('FinishedInfo');
+            } else {
+                console.error('Failed to update user information:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    responseData,
+                });
+            }
+        } catch (error) {
+            console.error('Error updating user information:', error);
+        }
+    };
 
     const handleNext = () => {
         if (step === 2) {
@@ -225,8 +248,8 @@ const HandleFinish = async () => {
                             <Text style={styles.arrow}>----------------------------------➤</Text>
                             {loading ? (
                                 <Text style={styles.title}>Loading...</Text>
-                            ) : error ? (
-                                <Text style={styles.title}>{error}</Text>
+                            ) : errors.occupationOptions ? (
+                                <Text style={styles.title}>Error: {errors.occupationOptions}</Text>
                             ) : (
                                 options.map((opt) => (
                                     <TouchableOpacity
@@ -260,12 +283,14 @@ const HandleFinish = async () => {
                             <Text style={styles.arrow}>----------------------------------➤</Text>
                             {loading ? (
                                 <Text style={styles.title}>Loading...</Text>
-                            ) : error ? (
-                                <Text style={styles.title}>{error}</Text>
+                            ) : errors.studyPreferences || errors.educationLevels ? (
+                                <Text style={styles.title}>
+                                    Error: {errors.studyPreferences || errors.educationLevels}
+                                </Text>
                             ) : (
                                 <>
                                     <Text style={[styles.optionText, { fontWeight: 'bold', marginBottom: 10 }]}>
-                                        Study Preferences(You can choose more than 1):
+                                        Study Preferences (You can choose more than 1):
                                     </Text>
                                     {studyPreferences.map((pref) => (
                                         <TouchableOpacity
@@ -273,23 +298,26 @@ const HandleFinish = async () => {
                                             style={styles.optionRow}
                                             onPress={() => {
                                                 if (studyPreferencesSelected.includes(pref.value)) {
-                                                    setStudyPreferencesSelected(studyPreferencesSelected.filter((p) => p !== pref.value));
+                                                    setStudyPreferencesSelected(
+                                                        studyPreferencesSelected.filter((p) => p !== pref.value)
+                                                    );
                                                 } else {
                                                     setStudyPreferencesSelected([...studyPreferencesSelected, pref.value]);
                                                 }
                                             }}
                                             activeOpacity={0.7}
                                         >
-                                            {/* <FontAwesome name={pref.icon as any} size={20} color="#000" style={styles.optionIcon} /> */}
                                             <View style={styles.checkbox}>
-                                                {studyPreferencesSelected.includes(pref.value) && <FontAwesome name="check" size={16} color="#000" />}
+                                                {studyPreferencesSelected.includes(pref.value) && (
+                                                    <FontAwesome name="check" size={16} color="#000" />
+                                                )}
                                             </View>
                                             <Text style={styles.optionText}>{pref.label}</Text>
                                         </TouchableOpacity>
                                     ))}
 
                                     <Text style={[styles.optionText, { fontWeight: 'bold', marginTop: 20, marginBottom: 10 }]}>
-                                        Education Level :
+                                        Education Level:
                                     </Text>
                                     {educationLevels.map((level) => (
                                         <TouchableOpacity
@@ -298,9 +326,10 @@ const HandleFinish = async () => {
                                             onPress={() => setSelectedEducationLevel(level.value)}
                                             activeOpacity={0.7}
                                         >
-                                            {/* <FontAwesome name={level.icon as any} size={20} color="#000" style={styles.optionIcon} /> */}
                                             <View style={styles.checkbox}>
-                                                {selectedEducationLevel === level.value && <FontAwesome name="check" size={16} color="#000" />}
+                                                {selectedEducationLevel === level.value && (
+                                                    <FontAwesome name="check" size={16} color="#000" />
+                                                )}
                                             </View>
                                             <Text style={styles.optionText}>{level.label}</Text>
                                         </TouchableOpacity>
@@ -319,7 +348,9 @@ const HandleFinish = async () => {
                                                 styles.nextBtn,
                                                 {
                                                     backgroundColor:
-                                                        studyPreferencesSelected.length === 0 || !selectedEducationLevel ? '#ccc' : '#4CAF50',
+                                                        studyPreferencesSelected.length === 0 || !selectedEducationLevel
+                                                            ? '#ccc'
+                                                            : '#4CAF50',
                                                 },
                                             ]}
                                             onPress={handleNext}
@@ -339,12 +370,11 @@ const HandleFinish = async () => {
                             <Text style={styles.title}>Your Bio</Text>
                             <Text style={styles.arrow}>----------------------------------➤</Text>
                             <View style={styles.inputContainer}>
-                                {/* <FontAwesome name="user" size={20} color="#000" style={styles.inputIcon} /> */}
                                 <TextInput
                                     placeholder="Write a short bio about yourself"
-                                    value={occupation} // Sử dụng occupation state để lưu bio
+                                    value={occupation}
                                     onChangeText={setOccupation}
-                                    style={[styles.input, { height: 100, textAlignVertical: 'top' }]} // Tăng chiều cao để viết nhiều dòng
+                                    style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                                     multiline={true}
                                 />
                             </View>
@@ -377,8 +407,8 @@ const HandleFinish = async () => {
                             <Text style={styles.arrow}>----------------------------------➤</Text>
                             {loading ? (
                                 <Text style={styles.title}>Loading...</Text>
-                            ) : error ? (
-                                <Text style={styles.title}>{error}</Text>
+                            ) : errors.genderOptions ? (
+                                <Text style={styles.title}>Error: {errors.genderOptions}</Text>
                             ) : (
                                 <>
                                     {genderOptions.map((opt) => (
@@ -418,14 +448,15 @@ const HandleFinish = async () => {
                             )}
                         </View>
                     )}
+
                     {step === 5 && (
                         <View style={styles.card}>
                             <Text style={styles.title}>Select Your Subjects</Text>
                             <Text style={styles.arrow}>----------------------------------➤</Text>
                             {loading ? (
                                 <Text style={styles.title}>Loading...</Text>
-                            ) : error ? (
-                                <Text style={styles.title}>{error}</Text>
+                            ) : errors.subjectOptions ? (
+                                <Text style={styles.title}>Error: {errors.subjectOptions}</Text>
                             ) : (
                                 <>
                                     {subjectOptions.map((opt) => (
@@ -434,7 +465,9 @@ const HandleFinish = async () => {
                                             style={styles.optionRow}
                                             onPress={() => {
                                                 if (subjectExperiences.some((item) => item.subject === opt.value)) {
-                                                    setSubjectExperiences(subjectExperiences.filter((item) => item.subject !== opt.value));
+                                                    setSubjectExperiences(
+                                                        subjectExperiences.filter((item) => item.subject !== opt.value)
+                                                    );
                                                 } else {
                                                     setSubjectExperiences([...subjectExperiences, { subject: opt.value, level: '' }]);
                                                 }
@@ -442,13 +475,18 @@ const HandleFinish = async () => {
                                             activeOpacity={0.7}
                                         >
                                             <View style={styles.checkbox}>
-                                                {subjectExperiences.some((item) => item.subject === opt.value) && <FontAwesome name="check" size={16} color="#000" />}
+                                                {subjectExperiences.some((item) => item.subject === opt.value) && (
+                                                    <FontAwesome name="check" size={16} color="#000" />
+                                                )}
                                             </View>
                                             <Text style={styles.optionText}>{opt.label}</Text>
                                         </TouchableOpacity>
                                     ))}
                                     <View style={styles.row}>
-                                        <TouchableOpacity style={[styles.nextBtn, { backgroundColor: '#757575' }]} onPress={handleBack}>
+                                        <TouchableOpacity
+                                            style={[styles.nextBtn, { backgroundColor: '#757575' }]}
+                                            onPress={handleBack}
+                                        >
                                             <Text style={styles.nextText}>Back</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
