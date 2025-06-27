@@ -19,11 +19,34 @@ const FRIEND_ITEM_WIDTH = width > 600 ? width * 0.3 : width * 0.9;
 
 interface Friend {
   id: string;
+  user?: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+  };
   name: string;
-  avatar?: string;
+  avatarUrl?: string;
   lastMessage?: string;
   timestamp?: string;
 }
+
+const FriendItem: React.FC<{ friend: Friend; onPress: () => void }> = ({ friend, onPress }) => {
+  return (
+    <TouchableOpacity style={styles.friendItem} onPress={onPress}>
+      <Image
+        source={{ uri: friend.avatarUrl || 'https://placekitten.com/200/200' }}
+        style={styles.friendAvatar}
+      />
+      <View style={styles.friendInfo}>
+        <Text style={styles.friendName}>{friend.user?.name}</Text>
+        <Text style={styles.lastMessage} numberOfLines={1}>
+          {friend.lastMessage || 'No message'}
+        </Text>
+      </View>
+      <Text style={styles.timestamp}>{friend.timestamp || 'N/A'}</Text>
+    </TouchableOpacity>
+  );
+};
 
 const FriendListScreen: React.FC = () => {
   const navigation: any = useNavigation();
@@ -33,15 +56,21 @@ const FriendListScreen: React.FC = () => {
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const response = await fetch('http://192.168.10.233:7187/api/Relationship/friends', {
+        const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Relationship/friends', {
           method: 'GET',
           headers: {
-            'accept': '*/*',
+            accept: '*/*',
           },
         });
         const data = await response.json();
+        console.log('API Response:', data); // Kiểm tra dữ liệu API
         if (data && Array.isArray(data)) {
-          setFriends(data);
+          const processedData = data.map((item, index) => ({
+            ...item,
+            id: item.id || `temp-id-${index}`, // Đảm bảo id duy nhất
+            avatarUrl: item.avatarUrl || 'https://placekitten.com/200/200', // Đặt URL mặc định
+          }));
+          setFriends(processedData);
         } else {
           setFriends([]);
         }
@@ -57,25 +86,13 @@ const FriendListScreen: React.FC = () => {
   }, []);
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
-    <TouchableOpacity
-      style={styles.friendItem}
-      onPress={() => navigation.navigate('Chat', { friend: item })}
-    >
-      <Image source={{ uri: item.avatar || 'https://via.placeholder.com/50' }} style={styles.friendAvatar} />
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.name}</Text>
-        <Text style={styles.lastMessage} numberOfLines={1}>
-          {item.lastMessage || 'No message'}
-        </Text>
-      </View>
-      <Text style={styles.timestamp}>{item.timestamp || 'N/A'}</Text>
-    </TouchableOpacity>
+    <FriendItem friend={item} onPress={() => navigation.navigate('Chat', { friend: item })} />
   );
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>Đang tải...</Text>
       </View>
     );
   }
@@ -88,7 +105,7 @@ const FriendListScreen: React.FC = () => {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Chats</Text>
+            <Text style={styles.headerTitle}>Trò chuyện</Text>
           </View>
           <View style={styles.friendListContainer}>
             {friends.length > 0 ? (
@@ -100,7 +117,7 @@ const FriendListScreen: React.FC = () => {
                 contentContainerStyle={styles.friendListContent}
               />
             ) : (
-              <Text style={styles.noFriendsText}>No friends available</Text>
+              <Text style={styles.noFriendsText}>Không có bạn bè nào</Text>
             )}
           </View>
         </SafeAreaView>
@@ -159,6 +176,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 12,
+    backgroundColor: '#E2E8F0',
   },
   friendInfo: {
     flex: 1,
