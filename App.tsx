@@ -24,6 +24,8 @@ import FriendListScreen from './Screens/FriendListScreen';
 import OtpScreen from './Screens/OtpScreen';
 import GroupForumScreen from './Screens/GroupForumScreen';
 import MapScreen from './Screens/MapScreen';
+import GroupListScreen from './Screens/GroupListScreen';
+import ForumScreen from './Screens/ForumScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -45,9 +47,9 @@ export default function App() {
             <Stack.Screen name="LogIn" component={LoginScreen} />
             <Stack.Screen name="BasicInfo" component={BasicInfoScreen} />
             <Stack.Screen name="FinishedInfo" component={FinishedInfo} />
-            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Homes" component={HomeScreen} />
             <Stack.Screen name="MyProfile" component={ProfileScreen} />
-            <Stack.Screen name="FindFriends" component={FindFriendsScreen} />
+            <Stack.Screen name="FindFriend" component={FindFriendsScreen} />
             <Stack.Screen name="UserDetail" component={UserDetail} />
             <Stack.Screen name="FindLocation" component={FindLocation} />
             <Stack.Screen name="LocationDetail" component={LocationDetail} />
@@ -57,8 +59,11 @@ export default function App() {
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="FriendList" component={FriendListScreen} />
             <Stack.Screen name="OtpScreen" component={OtpScreen} />
-            <Stack.Screen name="GroupsForums" component={GroupForumScreen} />
+            <Stack.Screen name="Home" component={GroupForumScreen} />
             <Stack.Screen name="Map" component={MapScreen} />
+            <Stack.Screen name="GroupListScreen" component={GroupListScreen} />
+            <Stack.Screen name="ForumScreen" component={ForumScreen} />
+
 
 
           </Stack.Navigator>

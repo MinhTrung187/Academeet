@@ -14,7 +14,7 @@ const HeaderComponent = () => {
     const fetchUserData = async () => {
       setIsLoading(true); // Bắt đầu loading
       try {
-        const response = await axios.get<{ name: string }>('http://192.168.10.233:7187/api/User/current-user');
+        const response = await axios.get<{ name: string }>('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user');
         setUserName(response.data.name);
       } catch (error) {
         console.error('Error fetching user data:', error);
