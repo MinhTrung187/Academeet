@@ -58,7 +58,7 @@ const AIAssistantScreen: React.FC = () => {
         formData.append('SessionId', sessionId || '');
         formData.append('Prompt', inputText);
 
-        const response = await fetch('http://192.168.88.147:7187/api/AIChat/send-message', {
+        const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/AIChat/send-message', {
           method: 'POST',
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -68,9 +68,12 @@ const AIAssistantScreen: React.FC = () => {
 
         const data = await response.json();
         if (response.ok) {
+          const cleanedText = (data.reply || 'Không có phản hồi từ AI')
+            .replace(/[\r\n]+$/g, '') 
+            .trim();
           const aiResponse: Message = {
             id: messages.length + 2,
-            text: data.reply || 'Không có phản hồi từ AI',
+            text: cleanedText,
             isUser: false,
           };
           setMessages((prev) => [...prev, aiResponse]);
@@ -141,7 +144,7 @@ const AIAssistantScreen: React.FC = () => {
           type: uploadedFile.mimeType || 'application/octet-stream',
         } as any);
 
-        const response = await fetch('http://192.168.88.147:7187/api/AIChat/send-message', {
+        const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/AIChat/send-message', {
           method: 'POST',
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -204,125 +207,140 @@ const AIAssistantScreen: React.FC = () => {
   };
 
   return (
-    <LinearGradient
-      colors={['#E0F2FE', '#F0F9FF', '#F8FAFC']}
-      style={styles.container}
-    >
+    <>
       <SafeAreaView style={styles.safeArea}>
-        <LinearGradient
-          colors={['#60A5FA', '#3B82F6', '#1D4ED8']}
-          style={styles.header}
-        >
-          <Animated.View style={[styles.headerContent, { opacity: fadeAnim }]}>
-            <Text style={styles.headerText}>AI Assistant 🤖</Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <FontAwesome name="arrow-left" size={24} color="#fff" />
-            </TouchableOpacity>
-          </Animated.View>
-        </LinearGradient>
 
-        <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={styles.chatContainer}
-          showsVerticalScrollIndicator={false}
+        <LinearGradient
+          colors={['#E0F2FE', '#F0F9FF', '#F8FAFC']}
+          style={styles.container}
         >
-          {messages.map((message) => (
-            <View
-              key={message.id.toString()} // Ensure unique key using the id
-              style={[
-                styles.messageBubble,
-                message.isUser ? styles.userBubble : styles.aiBubble,
-              ]}
-            >
-              <Text style={styles.messageText}>{message.text}</Text>
-            </View>
-          ))}
-          {isTyping && (
-            <View style={styles.typingIndicator}>
-              <ActivityIndicator size="small" color="#3B82F6" />
-              <Text style={styles.typingText}>AI is typing...</Text>
+          <LinearGradient
+            colors={['#60A5FA', '#3B82F6', '#1D4ED8']}
+            style={styles.header}
+          >
+            <Animated.View style={[styles.headerContent, { opacity: fadeAnim }]}>
+              <Text style={styles.headerText}>AI bot chat  🤖</Text>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <FontAwesome name="arrow-left" size={24} color="#fff" />
+              </TouchableOpacity>
+            </Animated.View>
+          </LinearGradient>
+
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.chatContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {messages.map((message) => (
+              <View
+                key={message.id.toString()}
+                style={[
+                  styles.messageBubble,
+                  message.isUser ? styles.userBubble : styles.aiBubble,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.messageText,
+                    message.isUser && styles.userText, // 👈 chỉ áp dụng nếu là user
+                  ]}
+                >
+                  {message.text}
+                </Text>
+              </View>
+            ))}
+
+            {isTyping && (
+              <View style={styles.typingIndicator}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={styles.typingText}>AI is typing...</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          {uploadedFile && (
+            <View style={styles.fileRequestContainer}>
+              <TextInput
+                style={styles.input}
+                value={requestForFile}
+                onChangeText={setRequestForFile}
+                placeholder="Nhập yêu cầu cho file (tóm tắt, phân tích, dịch...)"
+                placeholderTextColor="#94A3B8"
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.sendButton}
+                onPress={handleSendRequestForFile}
+              >
+                <FontAwesome name="paper-plane" size={24} color="#fff" />
+              </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
 
-        {uploadedFile && (
-          <View style={styles.fileRequestContainer}>
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Summarize Document')}
+            >
+              <Text style={styles.quickActionText}>Summarize</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Explain Concept')}
+            >
+              <Text style={styles.quickActionText}>Explain</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Generate Ideas')}
+            >
+              <Text style={styles.quickActionText}>Ideas</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <TouchableOpacity style={styles.iconButton} onPress={handleDocumentUpload}>
+              <FontAwesome name="paperclip" size={24} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton}>
+              <FontAwesome name="microphone" size={24} color="#3B82F6" />
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
-              value={requestForFile}
-              onChangeText={setRequestForFile}
-              placeholder="Nhập yêu cầu cho file (tóm tắt, phân tích, dịch...)"
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Type your message..."
               placeholderTextColor="#94A3B8"
               multiline
             />
             <TouchableOpacity
-              style={styles.sendButton}
-              onPress={handleSendRequestForFile}
+              style={[styles.sendButton, { opacity: inputText.trim() ? 1 : 0.5 }]}
+              onPress={handleSendMessage}
+              disabled={!inputText.trim()}
             >
               <FontAwesome name="paper-plane" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        )}
 
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => handleQuickAction('Summarize Document')}
-          >
-            <Text style={styles.quickActionText}>Summarize</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => handleQuickAction('Explain Concept')}
-          >
-            <Text style={styles.quickActionText}>Explain</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => handleQuickAction('Generate Ideas')}
-          >
-            <Text style={styles.quickActionText}>Ideas</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.iconButton} onPress={handleDocumentUpload}>
-            <FontAwesome name="paperclip" size={24} color="#3B82F6" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <FontAwesome name="microphone" size={24} color="#3B82F6" />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Type your message..."
-            placeholderTextColor="#94A3B8"
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, { transform: [{ scale: fadeAnim }] }]}
-            onPress={handleSendMessage}
-          >
-            <FontAwesome name="paper-plane" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.bottomNavbarContainer}>
-          <BottomNavbar />
-        </View>
+          <View style={styles.bottomNavbarContainer}>
+          </View>
+        </LinearGradient>
       </SafeAreaView>
-    </LinearGradient>
+      <BottomNavbar />
+
+    </>
+
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+
   },
   safeArea: {
     flex: 1,
-    marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
 
   },
   header: {
@@ -339,6 +357,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 8,
+
   },
   headerContent: {
     flexDirection: 'row',
@@ -358,6 +377,11 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingBottom: 150,
   },
+  userText: {
+    color: '#FFFFFF', // hoặc màu khác tùy ý như '#FACC15' cho vàng, '#E0F2FE' cho xanh nhạt
+    fontWeight: '600',
+  },
+
   messageBubble: {
     maxWidth: width * 0.75,
     padding: 12,
