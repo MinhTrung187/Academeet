@@ -24,6 +24,7 @@ const CARD_WIDTH = width - 32;
 
 type RootStackParamList = {
   Welcome: undefined;
+  BasicInfo: undefined;
   // add other screens here if needed
 };
 
@@ -60,7 +61,7 @@ const ProfileScreen: React.FC = () => {
       } as any);
 
       try {
-        const response = await axios.post('http://192.168.10.233:7187/api/User/avatar', formData, {
+        const response = await axios.post('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/avatar', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -116,7 +117,7 @@ const ProfileScreen: React.FC = () => {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get('http://192.168.10.233:7187/api/User/current-user');
+        const response = await axios.get('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user');
         console.log('API Response:', response.data);
         setUserData({
           name: response.data.name || 'User',
@@ -248,7 +249,7 @@ const ProfileScreen: React.FC = () => {
             </View>
 
             <TouchableOpacity
-              onPress={() => console.log('Update Profile')}
+              onPress={() => navigation.navigate('BasicInfo')}
               activeOpacity={0.85}
               style={styles.updateButton}
             >
