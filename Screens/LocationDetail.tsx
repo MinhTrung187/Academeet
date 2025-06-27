@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
@@ -14,69 +14,171 @@ interface Location {
   time: string;
   image: string;
   details?: string;
+  coordinates: [number, number];
+  openingHours?: string;
+  address?: string;
+  cuisine?: string;
 }
 
 const LocationDetail = () => {
   const route = useRoute();
-  const { location } = route.params as { location: Location }; 
+  const { location } = route.params as { location: Location };
 
   const handleNavigateToGoogleMaps = () => {
-    console.log('Navigate to Google Maps');
+    const [lng, lat] = location.coordinates;
+    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    Linking.openURL(url);
   };
 
   return (
-    <LinearGradient colors={['#E6F0FA', '#F6F8FC']} style={styles.gradient}>
-      <HeaderComponent/>
+    <LinearGradient colors={['#D9E7FF', '#F0F4FF']} style={styles.gradient}>
       <ScrollView style={styles.container}>
         <Image source={{ uri: location.image }} style={styles.detailImage} />
         <View style={styles.infoContainer}>
           <Text style={styles.name}>{location.name}</Text>
-          <Text style={styles.detail}>
-            <Ionicons name="location-outline" size={16} color="#7D7D7D" /> {location.distanceFromYou} km from you
-          </Text>
-          <Text style={styles.detail}>
-            <Ionicons name="location-outline" size={16} color="#7D7D7D" /> {location.distanceFromPartner} km from partner
-          </Text>
-          <Image
-            source={{ uri: 'https://cdn.prod.website-files.com/5c29380b1110ec92a203aa84/66e5ce469b48938aa34d8684_Google%20Maps%20-%20Compressed.jpg' }}
-            style={styles.mapImage}
-          />
-          <Text style={styles.time}>
-            <Ionicons name="time-outline" size={16} color="#27AE60" /> {location.time}
-          </Text>
-          <Text style={styles.description}>{location.details}</Text>
-          <TouchableOpacity style={styles.mapButton} onPress={handleNavigateToGoogleMaps}>
+          <View style={styles.detailSection}>
+            <Text style={styles.sectionTitle}>Location Details</Text>
+            <View style={styles.detailRow}>
+              <Ionicons name="location-outline" size={20} color="#4A90E2" />
+              <Text style={styles.detail}>
+                Distance from you: {location.distanceFromYou}
+              </Text>
+            </View>
+            {location.distanceFromPartner && (
+              <View style={styles.detailRow}>
+                <Ionicons name="people-outline" size={20} color="#4A90E2" />
+                <Text style={styles.detail}>
+                  Distance from partner: {location.distanceFromPartner}
+                </Text>
+              </View>
+            )}
+            {location.openingHours && (
+              <View style={styles.detailRow}>
+                <Ionicons name="time-outline" size={20} color="#27AE60" />
+                <Text style={styles.detail}>
+                  Opening hours: {location.openingHours}
+                </Text>
+              </View>
+            )}
+            {location.address && (
+              <View style={styles.detailRow}>
+                <Ionicons name="home-outline" size={20} color="#4A90E2" />
+                <Text style={styles.detail}>
+                  Address: {location.address}
+                </Text>
+              </View>
+            )}
+            {location.cuisine && (
+              <View style={styles.detailRow}>
+                <Ionicons name="cafe-outline" size={20} color="#4A90E2" />
+                <Text style={styles.detail}>
+                  Cuisine: {location.cuisine}
+                </Text>
+              </View>
+            )}
+            {location.details && (
+              <View style={styles.detailRow}>
+                <Ionicons name="information-circle-outline" size={20} color="#4A90E2" />
+                <Text style={styles.description}>{location.details}</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={handleNavigateToGoogleMaps}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="map-outline" size={22} color="#FFFFFF" style={styles.mapButtonIcon} />
             <Text style={styles.mapButtonText}>Open in Google Maps</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <BottomNavbar/>
+      <BottomNavbar />
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1,         marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
- },
-  container: { flex: 1 },
-  detailImage: { width: '100%', height: 200, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
-  infoContainer: { padding: 16 },
-  name: { fontSize: 24, fontWeight: '700', color: '#2C3E50', marginBottom: 8 },
-  detail: { fontSize: 16, color: '#7D7D7D', marginVertical: 4 },
-  time: { fontSize: 16, color: '#27AE60', fontWeight: '500', marginVertical: 4 },
-  description: { fontSize: 14, color: '#4A4A4A', marginVertical: 8, lineHeight: 20 },
-  mapImage: {
+  gradient: {
+    flex: 1,
+    marginTop: StatusBar.currentHeight || 0,
+  },
+  container: {
+    flex: 1,
+  },
+  detailImage: {
     width: '100%',
-    height: 150,
-    borderRadius: 10,
-    marginVertical: 12,
+    height: 250,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  infoContainer: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: -20,
+    borderRadius: 16,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  name: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 12,
+  },
+  detailSection: {
+    marginTop: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  detail: {
+    fontSize: 16,
+    color: '#4A4A4A',
+    marginLeft: 8,
+    flex: 1,
+  },
+  description: {
+    fontSize: 14,
+    color: '#4A4A4A',
+    marginLeft: 8,
+    lineHeight: 22,
+    flex: 1,
   },
   mapButton: {
-    backgroundColor: '#4285F4',
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
+    backgroundColor: '#4A90E2',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 12,
+    justifyContent: 'center',
+    marginTop: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  mapButtonIcon: {
+    marginRight: 8,
   },
   mapButtonText: {
     color: '#FFFFFF',
