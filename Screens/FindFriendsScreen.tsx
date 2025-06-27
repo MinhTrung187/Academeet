@@ -34,13 +34,14 @@ interface User {
   age: number;
   bio?: string;
   occupation?: string;
+  genderIdentity?: string;
   educationLevel?: string;
   studyPreferences: string[] | { $values: string[] };
   subjects: string[] | { $values: string[] };
   avatars: string[] | { $values: string[] };
 }
 
-const API_BASE_URL = 'http://192.168.10.233:7187/api';
+const API_BASE_URL = 'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api';
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -121,32 +122,35 @@ const FindFriendsScreen = () => {
     }
   }, []);
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
-      cancelTokenSourceRef.current = axios.CancelToken.source();
-      const response = await axiosInstance.get('/User/users', {
-        cancelToken: cancelTokenSourceRef.current.token,
-      });
-      const allUsers = Array.isArray(response.data) ? response.data : response.data.$values || [];
-      const validUsers = allUsers.filter((user: User) => user && user.id && user.age > 0 && user.age < 150);
-      const filteredUsers = currentUser ? validUsers.filter((user: User) => user.id !== currentUser.id) : validUsers;
-      setUsers(filteredUsers);
-      console.log('Fetched users:', filteredUsers);
-      // Nếu không có user, thử fetch lại sau một khoảng thời gian
-      if (filteredUsers.length === 0) {
-        setTimeout(() => fetchUsers(), 5000); // Thử lại sau 5 giây
-      }
-    } catch (err) {
-      if (axios.isCancel(err)) return;
-      console.error('Error fetching users:', err);
-      setError('Failed to load users. Please try again.');
-    } finally {
-      setIsLoading(false);
+const fetchUsers = useCallback(async () => {
+  setIsLoading(true);
+  setError(null);
+  try {
+    if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
+    cancelTokenSourceRef.current = axios.CancelToken.source();
+    const response = await axiosInstance.get('/User/users', {
+      cancelToken: cancelTokenSourceRef.current.token,
+    });
+    const allUsers = Array.isArray(response.data) ? response.data : response.data.$values || [];
+    const validUsers = allUsers.filter((user: User) => user && user.id && user.age > 0 && user.age < 150);
+    // Lọc bỏ người dùng có tên "Academeet Admin"
+    const filteredUsers = currentUser
+      ? validUsers.filter((user: User) => user.id !== currentUser.id && user.name !== 'Academeet Admin')
+      : validUsers.filter((user: User) => user.name !== 'Academeet Admin');
+    setUsers(filteredUsers);
+    console.log('Fetched users:', filteredUsers);
+    // Nếu không có user, thử fetch lại sau một khoảng thời gian
+    if (filteredUsers.length === 0) {
+      setTimeout(() => fetchUsers(), 5000); // Thử lại sau 5 giây
     }
-  }, [currentUser]);
+  } catch (err) {
+    if (axios.isCancel(err)) return;
+    console.error('Error fetching users:', err);
+    setError('Failed to load users. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+}, [currentUser]);
 
   const handleSwipeRight = useCallback(
     async (user: User) => {

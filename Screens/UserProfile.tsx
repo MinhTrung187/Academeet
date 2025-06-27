@@ -60,7 +60,7 @@ const handleAccept = async () => {
     const formData = new FormData();
     formData.append('recipientId', friend.id);
 
-    const response = await fetch('http://192.168.10.233:7187/api/FriendRequest/send', {
+    const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/FriendRequest/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data',

@@ -24,7 +24,9 @@ const RequestList: React.FC<RequestListProps> = ({ requests, onRefresh, refreshi
     <ScrollView contentContainerStyle={styles.requestContainer} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <Text style={styles.sectionTitle}>Friend Requests</Text>
       {requests.length === 0 ? (
-        <Text>No friend requests found.</Text>
+        <View style={styles.noRequestsContainer}>
+          <Text style={styles.noRequestsText}>No friend requests yet.</Text>
+        </View>
       ) : (
         requests.map((request) => (
           <View key={request.$id || request.senderId} style={styles.requestCard}>
@@ -33,13 +35,14 @@ const RequestList: React.FC<RequestListProps> = ({ requests, onRefresh, refreshi
               <View style={styles.requestInfo}>
                 <Text style={styles.requestName}>{request.senderName}</Text>
                 <Text style={styles.requestTime}>
-                  {new Date(request.sentAt).toLocaleString('en-US', {
+                  {new Date(request.sentAt + 'Z').toLocaleString('en-US', {
                     hour: '2-digit',
                     minute: '2-digit',
                     hour12: true,
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
+                    timeZone: 'Asia/Ho_Chi_Minh', // Chuyển đổi sang giờ Việt Nam
                   })}
                 </Text>
               </View>
@@ -63,47 +66,109 @@ const RequestList: React.FC<RequestListProps> = ({ requests, onRefresh, refreshi
 };
 
 const styles = StyleSheet.create({
-  requestContainer: { paddingBottom: 20 },
+  requestContainer: {
+    paddingBottom: 24,
+    paddingHorizontal: 16,
+  },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1E293B',
-    paddingHorizontal: 15,
-    marginVertical: 10,
+    color: '#FFFFFF',
+    paddingHorizontal: 8,
+    marginVertical: 16,
     fontFamily: 'Poppins-Bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   requestCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 15,
-    padding: 12,
-    marginHorizontal: 15,
-    marginBottom: 10,
-    elevation: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  requestHeader: { flexDirection: 'row', alignItems: 'center' },
-  requestAvatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#E0E0E0' },
-  requestInfo: { marginLeft: 12, flex: 1 },
-  requestName: { fontSize: 16, fontWeight: '600', color: '#1E293B', fontFamily: 'Poppins-SemiBold' },
-  requestTime: { fontSize: 12, color: '#6B7280', fontFamily: 'Poppins-Regular' },
-  requestActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
-  actionButton: {
-    backgroundColor: '#EF4444',
-    borderRadius: 50,
+  requestHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  requestAvatar: {
     width: 60,
     height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+  },
+  requestInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  requestName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  requestTime: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    marginTop: 4,
+  },
+  requestActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+  },
+  actionButton: {
+    backgroundColor: '#34D399',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginLeft: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  rejectButton: {
+    backgroundColor: '#EF4444',
+  },
+  actionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  requestStatus: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    textAlign: 'right',
+    marginTop: 8,
+  },
+  noRequestsContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 16,
   },
-  rejectButton: { backgroundColor: '#EF4444' },
-  actionText: { color: '#FFF', fontSize: 14, fontWeight: '500', fontFamily: 'Poppins-Medium' },
-  requestStatus: { fontSize: 14, color: '#6B7280', fontFamily: 'Poppins-Regular', textAlign: 'right' },
+  noRequestsText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 });
 
 export default RequestList;
