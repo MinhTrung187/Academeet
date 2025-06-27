@@ -80,7 +80,7 @@ const GroupForumScreen: React.FC = () => {
       setIsLoading(true);
       try {
         const response = await axios.get<{ name: string }>(
-          'http://192.168.10.233:7187/api/User/current-user'
+          'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user'
         );
         if (isMounted) {
           setUserName(response.data.name);
