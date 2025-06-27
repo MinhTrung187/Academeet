@@ -42,7 +42,7 @@ const OtpScreen = () => {
     }
 
     try {
-      const response = await axios.post(`http://192.168.88.147:7187/api/Authentication/confirm-email?email=${email}&OTP=${otpCode}`);
+      const response = await axios.post(`https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Authentication/confirm-email?email=${email}&OTP=${otpCode}`);
       console.log('OTP Verification Response:', response.data);
 
       Alert.alert('Success', 'Email confirmed successfully!', [

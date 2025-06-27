@@ -35,60 +35,64 @@ const PremiumScreen = () => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <>
+      <SafeAreaView style={styles.safeArea}>
 
-      <LinearGradient colors={['#E6F0FA', '#F5F7FA', '#FFFFFF']} style={styles.container}>
+        <LinearGradient colors={['#E6F0FA', '#F5F7FA', '#FFFFFF']} style={styles.container}>
           <HeaderComponent />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-            <Text style={styles.title}>Premium NOW!</Text>
-            <TouchableOpacity style={styles.closeButton}>
-              <Text style={styles.closeText}>×</Text>
-            </TouchableOpacity>
-            <View style={styles.featureList}>
-              {featureList.map((feature, index) => (
-                <Animated.View key={index} style={{ opacity: fadeAnim }}>
-                  <Text style={styles.feature}>✔ {feature}</Text>
-                </Animated.View>
-              ))}
-            </View>
-            <Text style={styles.trialText}>FREE 1 MONTH TRIAL AND THEN</Text>
-            <View style={styles.plansContainer}>
-              <View style={styles.planCard}>
-                <LinearGradient colors={['#FFCC00', '#FF9900']} style={styles.planGradient}>
-                  <Text style={styles.planTitle}>MONTHLY PLAN</Text>
-                  <Text style={styles.price}>49K* for edu plan</Text>
-                  <Text style={styles.price}>69K for normal plan</Text>
-                  <TouchableOpacity style={styles.tryButton} activeOpacity={0.7} onPress={() => navigation.navigate('StudyTool')}>
-                    <Text style={styles.tryText}>Try it</Text>
-                  </TouchableOpacity>
-                </LinearGradient>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+              <Text style={styles.title}>Premium NOW!</Text>
+              <TouchableOpacity style={styles.closeButton}>
+                <Text style={styles.closeText}>×</Text>
+              </TouchableOpacity>
+              <View style={styles.featureList}>
+                {featureList.map((feature, index) => (
+                  <Animated.View key={index} style={{ opacity: fadeAnim }}>
+                    <Text style={styles.feature}>✔ {feature}</Text>
+                  </Animated.View>
+                ))}
               </View>
-              <View style={styles.planCard}>
-                <LinearGradient colors={['#FF6B9A', '#FF1493']} style={styles.planGradient}>
-                  <Text style={styles.planTitle}>YEARLY PLAN</Text>
-                  <Text style={styles.price}>499K* for edu plan</Text>
-                  <Text style={styles.price}>699K for normal plan</Text>
-                  <TouchableOpacity style={styles.tryButton} activeOpacity={0.7} onPress={() => navigation.navigate('StudyTool')}>
-                    <Text style={styles.tryText}>Try it</Text>
-                  </TouchableOpacity>
-                </LinearGradient>
+              <Text style={styles.trialText}>FREE 1 MONTH TRIAL AND THEN</Text>
+              <View style={styles.plansContainer}>
+                <View style={styles.planCard}>
+                  <LinearGradient colors={['#FFCC00', '#FF9900']} style={styles.planGradient}>
+                    <Text style={styles.planTitle}>MONTHLY PLAN</Text>
+                    <Text style={styles.price}>49K* for edu plan</Text>
+                    <Text style={styles.price}>69K for normal plan</Text>
+                    <TouchableOpacity style={styles.tryButton} activeOpacity={0.7} onPress={() => navigation.navigate('StudyTool')}>
+                      <Text style={styles.tryText}>Try it</Text>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                </View>
+                <View style={styles.planCard}>
+                  <LinearGradient colors={['#FF6B9A', '#FF1493']} style={styles.planGradient}>
+                    <Text style={styles.planTitle}>YEARLY PLAN</Text>
+                    <Text style={styles.price}>499K* for edu plan</Text>
+                    <Text style={styles.price}>699K for normal plan</Text>
+                    <TouchableOpacity style={styles.tryButton} activeOpacity={0.7} onPress={() => navigation.navigate('StudyTool')}>
+                      <Text style={styles.tryText}>Try it</Text>
+                    </TouchableOpacity>
+                  </LinearGradient>
+                </View>
               </View>
-            </View>
-          </Animated.View>
-        </ScrollView>
-        <BottomNavbar />
-      </LinearGradient>
-    </SafeAreaView>
+            </Animated.View>
+          </ScrollView>
+        </LinearGradient>
+      </SafeAreaView>
+      <BottomNavbar />
+    </>
+
+
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-            marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
-    
+    marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
+
   },
   container: {
     flex: 1,
