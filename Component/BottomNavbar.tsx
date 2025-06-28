@@ -5,6 +5,8 @@ import { useNavigation, useRoute, NavigationProp } from '@react-navigation/nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import axios from 'axios';
+import { Dimensions } from 'react-native';
+
 
 type BottomNavbarProps = {
   currentScreen?: 'Home' | 'FindFriend' | 'StudyTool' | 'AIScreen' | 'FindLocation';
@@ -21,20 +23,23 @@ type RootStackParamList = {
   Premium: undefined;
 };
 
+const { width } = Dimensions.get('window');
+const isSmallDevice = width < 360;
+const tabWidth = width / 6.5; // responsive chia 6.5 phần (số tab = 6)
+
 const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute();
   const currentRouteName = route.name as keyof RootStackParamList;
-
   const activeScreen = currentScreen || currentRouteName;
 
   const tabs = [
     { name: 'Home', icon: 'home', iconLib: 'Feather', symbol: 'Home' },
-    { name: 'FindFriend', icon: 'user-plus', iconLib: 'FontAwesome', symbol: 'FindFriend' },
+    { name: 'FindFriend', icon: 'user-plus', iconLib: 'FontAwesome', symbol: 'Friend' },
     { name: 'StudyTool', icon: 'pencil-square-o', iconLib: 'FontAwesome', symbol: 'StudyTool' },
     { name: 'AIScreen', icon: 'cogs', iconLib: 'FontAwesome', symbol: 'AIChat' },
-    { name: 'FindLocation', icon: 'map-marker', iconLib: 'FontAwesome', symbol: 'FindLocation' },
-      { name: 'MyProfile', icon: 'user-circle', iconLib: 'FontAwesome', symbol: 'Profile' }, // 👈 thêm dòng này
+    { name: 'FindLocation', icon: 'map-marker', iconLib: 'FontAwesome', symbol: 'Location' },
+    { name: 'MyProfile', icon: 'user-circle', iconLib: 'FontAwesome', symbol: 'Profile' }, // 👈 thêm dòng này
 
   ];
 
@@ -115,9 +120,10 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
           >
             <IconComponent
               name={tab.icon as any}
-              size={22}
+              size={isSmallDevice ? 18 : 22} // 👈 responsive icon
               color={isActive ? '#FFFFFF' : '#D1D5DB'}
             />
+
             <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
               {tab.symbol}
             </Text>
@@ -134,7 +140,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 8,
-    paddingBottom: 16,
+    paddingBottom: 14,
+    backgroundColor: 'transparent',
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(255, 255, 255, 0.3)',
     elevation: 4,
@@ -151,15 +158,16 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    width: tabWidth, // 👈 điều chỉnh chiều rộng tab
+    paddingVertical: isSmallDevice ? 4 : 6,
+    paddingHorizontal: 4,
     borderRadius: 10,
   },
   tabActive: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: isSmallDevice ? 10 : 12,
     color: '#D1D5DB',
     marginTop: 2,
   },

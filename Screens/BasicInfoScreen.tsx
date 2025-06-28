@@ -317,7 +317,7 @@ const BasicInfoScreen: React.FC = () => {
                                                 }}
                                                 activeOpacity={0.8}
                                             >
-                                
+
                                                 <Text
                                                     style={[
                                                         styles.optionText,
@@ -342,7 +342,7 @@ const BasicInfoScreen: React.FC = () => {
                                                 onPress={() => setSelectedEducationLevel(level.value)}
                                                 activeOpacity={0.8}
                                             >
-                                       
+
                                                 <Text
                                                     style={[
                                                         styles.optionText,
@@ -390,6 +390,7 @@ const BasicInfoScreen: React.FC = () => {
                             <View style={styles.card}>
                                 <Text style={styles.title}>Your Bio</Text>
                                 <Text style={styles.subtitle}>Tell us about yourself</Text>
+
                                 <TextInput
                                     placeholder="Write a short bio about yourself"
                                     value={occupation}
@@ -399,6 +400,14 @@ const BasicInfoScreen: React.FC = () => {
                                     numberOfLines={4}
                                     placeholderTextColor="#78909C"
                                 />
+
+                                {/* Hiển thị cảnh báo nếu bio quá dài */}
+                                {occupation.length > 255 && (
+                                    <Text style={styles.warningText}>
+                                        Bio is too long. Maximum 255 characters allowed.
+                                    </Text>
+                                )}
+
                                 <View style={styles.row}>
                                     <TouchableOpacity
                                         style={styles.backBtn}
@@ -407,13 +416,19 @@ const BasicInfoScreen: React.FC = () => {
                                     >
                                         <Text style={styles.nextText}>Back</Text>
                                     </TouchableOpacity>
+
                                     <TouchableOpacity
                                         style={[
                                             styles.nextBtn,
-                                            { backgroundColor: occupation.trim() ? '#634FEE' : '#B0BEC5' },
+                                            {
+                                                backgroundColor:
+                                                    occupation.trim() && occupation.length <= 255
+                                                        ? '#634FEE'
+                                                        : '#B0BEC5',
+                                            },
                                         ]}
                                         onPress={handleNext}
-                                        disabled={!occupation.trim()}
+                                        disabled={!occupation.trim() || occupation.length > 255}
                                         activeOpacity={0.8}
                                     >
                                         <Text style={styles.nextText}>Next</Text>
@@ -421,6 +436,7 @@ const BasicInfoScreen: React.FC = () => {
                                 </View>
                             </View>
                         )}
+
 
                         {step === 4 && (
                             <View style={styles.card}>
@@ -439,7 +455,7 @@ const BasicInfoScreen: React.FC = () => {
                                                 onPress={() => setName(opt.value)}
                                                 activeOpacity={0.8}
                                             >
-                                        
+
                                                 <Text
                                                     style={[styles.optionText, name === opt.value && styles.optionTextSelected]}
                                                 >
@@ -491,7 +507,7 @@ const BasicInfoScreen: React.FC = () => {
                                                 style={[
                                                     styles.optionRow,
                                                     subjectExperiences.some((item) => item.subject === opt.value) &&
-                                                        styles.optionRowSelected,
+                                                    styles.optionRowSelected,
                                                 ]}
                                                 onPress={() => {
                                                     setSubjectExperiences(
@@ -502,12 +518,12 @@ const BasicInfoScreen: React.FC = () => {
                                                 }}
                                                 activeOpacity={0.8}
                                             >
-                              
+
                                                 <Text
                                                     style={[
                                                         styles.optionText,
                                                         subjectExperiences.some((item) => item.subject === opt.value) &&
-                                                            styles.optionTextSelected,
+                                                        styles.optionTextSelected,
                                                     ]}
                                                 >
                                                     {opt.label}
@@ -651,6 +667,13 @@ const styles = StyleSheet.create({
         color: '#263238',
         marginLeft: 12,
     },
+    warningText: {
+        color: '#EF4444',
+        marginTop: 6,
+        fontSize: 13,
+        fontFamily: 'Poppins-Medium',
+    },
+
     optionTextSelected: {
         color: '#634FEE',
         fontWeight: '600',

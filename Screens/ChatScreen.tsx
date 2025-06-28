@@ -27,7 +27,7 @@ import FriendMessage from '../Component/FriendMessage';
 interface Friend {
   id: string;
   name: string;
-  avatar: string;
+  avatarUrl: string;
   chatId: number;
   lastMessage: string;
   timestamp: string;
@@ -300,25 +300,25 @@ const ChatScreen: React.FC = () => {
   };
 
 
-const renderMessage = ({ item }: { item: Message }) => {
-  const isMe = item.senderId === currentUserId;
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isMe = item.senderId === currentUserId;
 
-  return isMe ? (
-    <UserMessage
-      text={item.text}
-      timestamp={item.timestamp}
-      isDeleted={item.isDeleted}
-      attachmentUrls={item.attachmentUrls}
-    />
-  ) : (
-    <FriendMessage
-      text={item.text}
-      timestamp={item.timestamp}
-      isDeleted={item.isDeleted}
-      attachmentUrls={item.attachmentUrls}
-    />
-  );
-};
+    return isMe ? (
+      <UserMessage
+        text={item.text}
+        timestamp={item.timestamp}
+        isDeleted={item.isDeleted}
+        attachmentUrls={item.attachmentUrls}
+      />
+    ) : (
+      <FriendMessage
+        text={item.text}
+        timestamp={item.timestamp}
+        isDeleted={item.isDeleted}
+        attachmentUrls={item.attachmentUrls}
+      />
+    );
+  };
 
 
 
@@ -327,70 +327,73 @@ const renderMessage = ({ item }: { item: Message }) => {
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <FontAwesome name="arrow-left" size={24} color="#fff" />
       </TouchableOpacity>
-      <Image source={{ uri: friend.avatar }} style={styles.chatAvatar} />
+      <Image source={{ uri: friend.user.avatarUrl }} style={styles.chatAvatar} />
       <Text style={styles.chatFriendName}>{friend.user.name}</Text>
     </View>
   );
 
   return (
-    <LinearGradient colors={['#E0F2FE', '#F0F9FF', '#F8FAFC']} style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-        >
-          <View style={{ flex: 1 }}>
-            {loadingMessages ? (
-              <ActivityIndicator size="large" color="#3B82F6" />
-            ) : (
-              <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderMessage}
-                keyExtractor={(item, index) => `${item.id}-${index}`}
-                ListHeaderComponent={renderStickyHeader}
-                contentContainerStyle={styles.messageListContent}
-                stickyHeaderIndices={[0]}
-                extraData={messages}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+    <>
+      <LinearGradient colors={['#E0F2FE', '#F0F9FF', '#F8FAFC']} style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+          >
+            <View style={{ flex: 1 }}>
+              {loadingMessages ? (
+                <ActivityIndicator size="large" color="#3B82F6" />
+              ) : (
+                <FlatList
+                  ref={flatListRef}
+                  data={messages}
+                  renderItem={renderMessage}
+                  keyExtractor={(item, index) => `${item.id}-${index}`}
+                  ListHeaderComponent={renderStickyHeader}
+                  contentContainerStyle={styles.messageListContent}
+                  stickyHeaderIndices={[0]}
+                  extraData={messages}
+                  onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                  onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                />
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TouchableOpacity onPress={pickFile} style={styles.attachButton}>
+                <FontAwesome name="paperclip" size={20} color="#2563EB" />
+              </TouchableOpacity>
+
+              <TextInput
+                style={styles.messageInput}
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder="Type a message..."
+                placeholderTextColor="#94A3B8"
+                editable={!loading}
+                multiline
               />
-            )}
-          </View>
+              <TouchableOpacity
+                style={styles.sendButton}
+                onPress={() => {
+                  console.log('🖱️ Nút gửi được bấm');
+                  handleSendMessage();
+                }}
+                disabled={loading}
+              >
+                <FontAwesome name="paper-plane" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.inputContainer}>
-            <TouchableOpacity onPress={pickFile} style={styles.attachButton}>
-              <FontAwesome name="paperclip" size={20} color="#2563EB" />
-            </TouchableOpacity>
+            <View style={styles.bottomNavbarContainer}>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </LinearGradient>
+      <BottomNavbar />
+    </>
 
-            <TextInput
-              style={styles.messageInput}
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Type a message..."
-              placeholderTextColor="#94A3B8"
-              editable={!loading}
-              multiline
-            />
-            <TouchableOpacity
-              style={styles.sendButton}
-              onPress={() => {
-                console.log('🖱️ Nút gửi được bấm');
-                handleSendMessage();
-              }}
-              disabled={loading}
-            >
-              <FontAwesome name="paper-plane" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.bottomNavbarContainer}>
-            <BottomNavbar />
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
   );
 };
 

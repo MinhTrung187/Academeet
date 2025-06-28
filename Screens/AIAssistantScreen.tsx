@@ -363,6 +363,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    color: '#2563EB',
   },
   headerText: {
     fontSize: 24,

@@ -20,7 +20,7 @@ interface User {
   educationLevel?: string;
   studyPreferences: string[] | { $values: string[] };
   subjects: string[] | { $values: string[] };
-  avatars: string[] | { $values: string[] };
+  avatarUrl: string;
 }
 
 interface CardComponentProps {
@@ -29,8 +29,10 @@ interface CardComponentProps {
   panResponder: any;
   index: number;
 }
-
 const { width, height } = Dimensions.get('window');
+
+const CARD_WIDTH = Math.min(width * 0.9, 360); // Giới hạn tối đa 360px
+const CARD_HEIGHT = Math.min(height * 0.65, 600);
 
 const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, index }) => {
   const getSafeArray = (
@@ -38,10 +40,10 @@ const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, 
     defaultValue = 'No info'
   ) => (Array.isArray(array) ? array : array?.$values || [defaultValue]);
 
-  const avatarUrl =
-    Array.isArray(user.avatars)
-      ? user.avatars[0] || 'https://randomuser.me/api/portraits/lego/1.jpg'
-      : user.avatars?.$values?.[0] || 'https://randomuser.me/api/portraits/lego/1.jpg';
+  const avatarUrl = user.avatarUrl
+    ? user.avatarUrl
+    : 'https://randomuser.me/api/portraits/men/1.jpg';
+
 
   const rotate = pan.x.interpolate({
     inputRange: [-width / 2, 0, width / 2],
@@ -60,6 +62,13 @@ const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, 
     outputRange: [1, 0.5, 0],
     extrapolate: 'clamp',
   });
+  const bioLength = user.bio?.length || 0;
+  const bioFontSize =
+    bioLength > 220 ? 12 :
+      bioLength > 150 ? 13 :
+        bioLength > 100 ? 14 :
+          15;
+
 
   const connectOpacity = pan.x.interpolate({
     inputRange: [0, width / 4, width / 2],
@@ -72,6 +81,13 @@ const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, 
     zIndex: 3 - index,
     opacity: 1 - index * 0.1,
   };
+  // Tính toán số lượng chip để điều chỉnh kích thước font và padding động
+  const subjects = getSafeArray(user.subjects);
+  const preferences = getSafeArray(user.studyPreferences);
+  const totalChips = subjects.length + preferences.length;
+  const dynamicFontSize = totalChips > 8 ? 12 : totalChips > 5 ? 13 : 14;
+  const dynamicChipPadding = totalChips > 8 ? 6 : 8;
+
 
   return (
     <Animated.View style={[styles.card, animatedStyle]} {...panResponder.panHandlers}>
@@ -101,54 +117,54 @@ const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, 
 
         <View style={styles.onlineIndicator} />
 
-       {/* Name - dòng riêng */}
-<Text style={styles.nameText}>
-  {user.name || 'Unnamed User'}
-</Text>
+        {/* Name - dòng riêng */}
+        <Text style={styles.nameText}>
+          {user.name || 'Unnamed User'}
+        </Text>
 
-{/* Age + Gender - dòng riêng */}
-<View style={styles.ageGenderRow}>
-  <Text style={styles.ageText}>
-    {user.age ? `${user.age} years old` : 'Unknown age'}
-  </Text>
-  {user.genderIdentity && (
-    <View style={styles.genderTag}>
-      <FontAwesome
-        name={
-          user.genderIdentity.toLowerCase() === 'male'
-            ? 'mars'
-            : user.genderIdentity.toLowerCase() === 'female'
-            ? 'venus'
-            : 'genderless'
-        }
-        size={14}
-        color={
-          user.genderIdentity.toLowerCase() === 'male'
-            ? '#3B82F6'
-            : user.genderIdentity.toLowerCase() === 'female'
-            ? '#EC4899'
-            : '#10B981'
-        }
-      />
-      <Text
-        style={[
-          styles.genderText,
-          {
-            color:
-              user.genderIdentity.toLowerCase() === 'male'
-                ? '#3B82F6'
-                : user.genderIdentity.toLowerCase() === 'female'
-                ? '#EC4899'
-                : '#10B981',
-          },
-        ]}
-      >
-        {'  '}
-        {user.genderIdentity}
-      </Text>
-    </View>
-  )}
-</View>
+        {/* Age + Gender - dòng riêng */}
+        <View style={styles.ageGenderRow}>
+          <Text style={styles.ageText}>
+            {user.age ? `${user.age} years old` : 'Unknown age'}
+          </Text>
+          {user.genderIdentity && (
+            <View style={styles.genderTag}>
+              <FontAwesome
+                name={
+                  user.genderIdentity.toLowerCase() === 'male'
+                    ? 'mars'
+                    : user.genderIdentity.toLowerCase() === 'female'
+                      ? 'venus'
+                      : 'genderless'
+                }
+                size={14}
+                color={
+                  user.genderIdentity.toLowerCase() === 'male'
+                    ? '#3B82F6'
+                    : user.genderIdentity.toLowerCase() === 'female'
+                      ? '#EC4899'
+                      : '#10B981'
+                }
+              />
+              <Text
+                style={[
+                  styles.genderText,
+                  {
+                    color:
+                      user.genderIdentity.toLowerCase() === 'male'
+                        ? '#3B82F6'
+                        : user.genderIdentity.toLowerCase() === 'female'
+                          ? '#EC4899'
+                          : '#10B981',
+                  },
+                ]}
+              >
+                {'  '}
+                {user.genderIdentity}
+              </Text>
+            </View>
+          )}
+        </View>
 
 
         {/* Occupation */}
@@ -186,7 +202,7 @@ const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, 
         {/* Bio */}
         <View style={styles.bioContainer}>
           <FontAwesome name="quote-left" size={12} color="#6B7280" style={styles.quoteIcon} />
-          <Text style={styles.bio}>{user.bio || 'No bio available'}</Text>
+          <Text style={[styles.bio, { fontSize: bioFontSize }]}>{user.bio || 'No bio available'}</Text>
           <FontAwesome name="quote-right" size={12} color="#6B7280" style={styles.quoteIcon} />
         </View>
       </LinearGradient>
@@ -197,7 +213,8 @@ const CardComponent: React.FC<CardComponentProps> = ({ user, pan, panResponder, 
 const styles = StyleSheet.create({
   card: {
     position: 'absolute',
-    width: Math.min(width * 0.9, 360),
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT, // Thêm height cố định
     borderRadius: 20,
     elevation: 10,
     shadowColor: '#000',
@@ -205,7 +222,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     backgroundColor: '#fff',
-    maxHeight: height * 0.8,
+
   },
   cardInner: {
     flex: 1,
@@ -305,6 +322,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: '100%',
     flexWrap: 'wrap',
+    marginBottom: 12,
   },
   bio: {
     fontSize: 14,
@@ -320,38 +338,38 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   nameText: {
-  fontSize: 22,
-  fontWeight: '700',
-  fontFamily: 'Poppins-SemiBold',
-  color: '#1E293B',
-  textAlign: 'center',
-  marginBottom: 4,
-},
+    fontSize: 22,
+    fontWeight: '700',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
 
-ageGenderRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 12,
-  gap: 12,
-},
+  ageGenderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
 
-ageText: {
-  fontSize: 14,
-  fontFamily: 'Poppins-Regular',
-  color: '#6B7280',
-},
+  ageText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
+  },
 
-genderTag: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 4,
-},
+  genderTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
 
-genderText: {
-  fontSize: 14,
-  fontFamily: 'Poppins-Medium',
-},
+  genderText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Medium',
+  },
 
   labelContainer: {
     position: 'absolute',
@@ -367,18 +385,18 @@ genderText: {
     backgroundColor: 'rgba(255,255,255,0.85)',
   },
   nameRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 6,
-  gap: 8,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+  },
 
-genderRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 14,
-  gap: 6,
-},
+  genderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 6,
+  },
 
   skipLabel: {
     left: 16,

@@ -93,7 +93,7 @@ const ProfileScreen: React.FC = () => {
     educationLevel: string;
     studyPreferences: { $values: string[] };
     subjects: { $values: string[] };
-    avatars: { $values: any[] };
+    avatarUrl: string;
   }>({
     name: '',
     age: 0,
@@ -102,7 +102,7 @@ const ProfileScreen: React.FC = () => {
     educationLevel: '',
     studyPreferences: { $values: [] },
     subjects: { $values: [] },
-    avatars: { $values: [] },
+    avatarUrl: '',
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -127,7 +127,7 @@ const ProfileScreen: React.FC = () => {
           educationLevel: response.data.educationLevel || 'Not specified',
           studyPreferences: { $values: response.data.studyPreferences || [] }, // Đảm bảo là object với $values
           subjects: { $values: response.data.subjects || [] }, // Đảm bảo là object với $values
-          avatars: { $values: response.data.avatars || [] },
+          avatarUrl: response.data.avatarUrl || '',
         });
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -139,7 +139,7 @@ const ProfileScreen: React.FC = () => {
           educationLevel: 'Not specified',
           studyPreferences: { $values: [] },
           subjects: { $values: [] },
-          avatars: { $values: [] },
+          avatarUrl: '',
         });
       } finally {
         setIsLoading(false);
@@ -160,8 +160,8 @@ const ProfileScreen: React.FC = () => {
   }, [isLoading]);
 
   const avatarUrl =
-    userData.avatars && userData.avatars.$values && userData.avatars.$values.length > 0
-      ? userData.avatars.$values[0]
+    userData.avatarUrl
+      ? userData.avatarUrl
       : 'https://randomuser.me/api/portraits/men/1.jpg';
 
   const tagConfigs = [

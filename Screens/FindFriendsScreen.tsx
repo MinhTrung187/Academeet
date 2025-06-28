@@ -38,7 +38,7 @@ interface User {
   educationLevel?: string;
   studyPreferences: string[] | { $values: string[] };
   subjects: string[] | { $values: string[] };
-  avatars: string[] | { $values: string[] };
+  avatarUrl: string;
 }
 
 const API_BASE_URL = 'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api';
@@ -122,35 +122,54 @@ const FindFriendsScreen = () => {
     }
   }, []);
 
-const fetchUsers = useCallback(async () => {
-  setIsLoading(true);
-  setError(null);
-  try {
-    if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
-    cancelTokenSourceRef.current = axios.CancelToken.source();
-    const response = await axiosInstance.get('/User/users', {
-      cancelToken: cancelTokenSourceRef.current.token,
-    });
-    const allUsers = Array.isArray(response.data) ? response.data : response.data.$values || [];
-    const validUsers = allUsers.filter((user: User) => user && user.id && user.age > 0 && user.age < 150);
-    // Lọc bỏ người dùng có tên "Academeet Admin"
-    const filteredUsers = currentUser
-      ? validUsers.filter((user: User) => user.id !== currentUser.id && user.name !== 'Academeet Admin')
-      : validUsers.filter((user: User) => user.name !== 'Academeet Admin');
-    setUsers(filteredUsers);
-    console.log('Fetched users:', filteredUsers);
-    // Nếu không có user, thử fetch lại sau một khoảng thời gian
-    if (filteredUsers.length === 0) {
-      setTimeout(() => fetchUsers(), 5000); // Thử lại sau 5 giây
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (cancelTokenSourceRef.current)
+        cancelTokenSourceRef.current.cancel('New request initiated');
+
+      cancelTokenSourceRef.current = axios.CancelToken.source();
+
+      const response = await axiosInstance.get('/User/feed', {
+        cancelToken: cancelTokenSourceRef.current.token,
+        params: {
+          includeFriends: false,
+          pageIndex: 1, // nếu bạn muốn phân trang thì truyền thêm
+        },
+      });
+
+      const allUsers = Array.isArray(response.data?.items)
+        ? response.data.items
+        : [];
+
+      const validUsers = allUsers.filter((user: User) =>
+        user && user.id && user.age > 0 && user.age < 150
+      );
+
+      const filteredUsers = currentUser
+        ? validUsers.filter(
+          (user: User) =>
+            user.id !== currentUser.id &&
+            user.name !== 'Academeet Admin'
+        )
+        : validUsers.filter((user: User) => user.name !== 'Academeet Admin');
+
+      setUsers(filteredUsers);
+      console.log('Fetched users:', filteredUsers);
+
+      if (filteredUsers.length === 0) {
+        setTimeout(() => fetchUsers(), 5000); // thử lại sau 5s
+      }
+    } catch (err) {
+      if (axios.isCancel(err)) return;
+      console.error('Error fetching users:', err);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    if (axios.isCancel(err)) return;
-    console.error('Error fetching users:', err);
-    setError('Failed to load users. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-}, [currentUser]);
+  }, [currentUser]);
+
 
   const handleSwipeRight = useCallback(
     async (user: User) => {
@@ -279,64 +298,64 @@ const fetchUsers = useCallback(async () => {
     };
   }, [activeTab, fetchFriendRequests, fetchCurrentUser, fetchUsers, currentUser, users.length]);
 
-return (
-  <LinearGradient colors={['#A3BFFA', '#E6F0FA']} style={styles.container}>
-    <SafeAreaView style={styles.safeArea}>
-      <HeaderComponent />
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'find' && styles.activeTab]}
-          onPress={() => setActiveTab('find')}
-        >
-          <Text style={[styles.tabText, activeTab === 'find' && styles.activeTabText]}>Find Friends</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
-          onPress={() => setActiveTab('requests')}
-        >
-          <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>Friend Requests</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.content}>
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4A90E2" />
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => (activeTab === 'requests' ? fetchFriendRequests() : fetchUsers())}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : activeTab === 'find' ? (
-          users.length === 0 ? (
+  return (
+    <LinearGradient colors={['#A3BFFA', '#E6F0FA']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <HeaderComponent />
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'find' && styles.activeTab]}
+            onPress={() => setActiveTab('find')}
+          >
+            <Text style={[styles.tabText, activeTab === 'find' && styles.activeTabText]}>Find Friends</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+            onPress={() => setActiveTab('requests')}
+          >
+            <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>Friend Requests</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.content}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4A90E2" />
+              <Text style={styles.loadingText}>Loading...</Text>
+            </View>
+          ) : error ? (
             <View style={styles.errorContainer}>
-              <Text style={styles.noDataText}>No users found.</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchUsers}>
-                <Text style={styles.retryButtonText}>Try Again</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => (activeTab === 'requests' ? fetchFriendRequests() : fetchUsers())}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
+          ) : activeTab === 'find' ? (
+            users.length === 0 ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.noDataText}>No users found.</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={fetchUsers}>
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <CardStack users={users} onSwipeRight={handleSwipeRight} onSwipeLeft={handleSwipeLeft} />
+            )
           ) : (
-            <CardStack users={users} onSwipeRight={handleSwipeRight} onSwipeLeft={handleSwipeLeft} />
-          )
-        ) : (
-          <RequestList
-            requests={friendRequests}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-            onAction={handleRequestAction}
-          />
-        )}
-      </View>
-    </SafeAreaView>
-    <BottomNavbar />
-  </LinearGradient>
-);
+            <RequestList
+              requests={friendRequests}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              onAction={handleRequestAction}
+            />
+          )}
+        </View>
+      </SafeAreaView>
+      <BottomNavbar />
+    </LinearGradient>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -349,6 +368,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    marginBottom: -50,
   },
   tab: { paddingVertical: 8, paddingHorizontal: 20 },
   activeTab: { borderBottomWidth: 2, borderBottomColor: '#4A90E2' },

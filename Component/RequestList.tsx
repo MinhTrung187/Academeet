@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     paddingHorizontal: 8,
+    marginTop: 50,
     marginVertical: 16,
     fontFamily: 'Poppins-Bold',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',

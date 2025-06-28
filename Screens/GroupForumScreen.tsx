@@ -30,12 +30,15 @@ const GroupForumScreen: React.FC = () => {
   const [userName, setUserName] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigation = useNavigation<any>();
+  const [friends, setFriends] = useState<any[]>([]);
+  const [emptyFriendMessage, setEmptyFriendMessage] = useState<string>('');
 
-  const friends = [
-    { id: 1, name: 'Anna', avatar: 'https://i.pravatar.cc/150?img=1' },
-    { id: 2, name: 'Ben', avatar: 'https://i.pravatar.cc/150?img=2' },
-    { id: 3, name: 'Cindy', avatar: 'https://i.pravatar.cc/150?img=3' },
-  ];
+
+  // const friends = [
+  //   { id: 1, name: 'Anna', avatar: 'https://i.pravatar.cc/150?img=1' },
+  //   { id: 2, name: 'Ben', avatar: 'https://i.pravatar.cc/150?img=2' },
+  //   { id: 3, name: 'Cindy', avatar: 'https://i.pravatar.cc/150?img=3' },
+  // ];
 
   const dummyPosts: {
     title: string;
@@ -43,25 +46,25 @@ const GroupForumScreen: React.FC = () => {
     author: string;
     icon: React.ComponentProps<typeof FontAwesome>['name'];
   }[] = [
-    {
-      title: 'Làm sao để học hiệu quả hơn?',
-      content: 'Mọi người có tips gì để học đều các môn không? Mình đang bị lệch...',
-      author: 'Minh Trung',
-      icon: 'book',
-    },
-    {
-      title: 'Chia sẻ tài liệu IELTS Writing',
-      content: 'Mình có tổng hợp 50 đề mẫu writing band 8+, ai cần để lại mail nhé!',
-      author: 'Lan Anh',
-      icon: 'file-text',
-    },
-    {
-      title: 'Cần tìm bạn học nhóm React Native',
-      content: 'Mình đang học làm app với Expo, cần bạn học chung hoặc hỗ trợ nhau...',
-      author: 'Khoa Nguyễn',
-      icon: 'code',
-    },
-  ];
+      {
+        title: 'Làm sao để học hiệu quả hơn?',
+        content: 'Mọi người có tips gì để học đều các môn không? Mình đang bị lệch...',
+        author: 'Minh Trung',
+        icon: 'book',
+      },
+      {
+        title: 'Chia sẻ tài liệu IELTS Writing',
+        content: 'Mình có tổng hợp 50 đề mẫu writing band 8+, ai cần để lại mail nhé!',
+        author: 'Lan Anh',
+        icon: 'file-text',
+      },
+      {
+        title: 'Cần tìm bạn học nhóm React Native',
+        content: 'Mình đang học làm app với Expo, cần bạn học chung hoặc hỗ trợ nhau...',
+        author: 'Khoa Nguyễn',
+        icon: 'code',
+      },
+    ];
 
   const dummyGroups: {
     name: string;
@@ -69,15 +72,15 @@ const GroupForumScreen: React.FC = () => {
     description: string;
     icon: React.ComponentProps<typeof FontAwesome>['name'];
   }[] = [
-    { name: 'Marketing Group', members: 12, description: 'Discuss campaigns', icon: 'bullhorn' },
-    { name: 'UX Study Group', members: 8, description: 'Design Sprint', icon: 'paint-brush' },
-    { name: 'Dev Hangout', members: 20, description: 'Coding and coffee ☕', icon: 'laptop' },
-  ];
+      { name: 'Marketing Group', members: 12, description: 'Discuss campaigns', icon: 'bullhorn' },
+      { name: 'UX Study Group', members: 8, description: 'Design Sprint', icon: 'paint-brush' },
+      { name: 'Dev Hangout', members: 20, description: 'Coding and coffee ☕', icon: 'laptop' },
+    ];
 
   useEffect(() => {
     let isMounted = true;
+
     const fetchUserData = async () => {
-      setIsLoading(true);
       try {
         const response = await axios.get<{ name: string }>(
           'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user'
@@ -88,15 +91,45 @@ const GroupForumScreen: React.FC = () => {
       } catch (error) {
         console.error('Error fetching user data:', error);
         if (isMounted) setUserName('User');
-      } finally {
-        if (isMounted) setIsLoading(false);
       }
     };
+
+    const fetchFriends = async () => {
+      try {
+        const response = await axios.get(
+          'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Relationship/friends'
+        );
+
+        const data = Array.isArray(response.data) ? response.data : [];
+
+        if (data.length === 0) {
+          setEmptyFriendMessage('Bạn chưa có bạn nào. Hãy tìm kiếm và kết bạn với người dùng khác!');
+          setFriends([]);
+        } else {
+          const formattedFriends = data.map((item: any) => ({
+            id: item.user.id,
+            name: item.user.name,
+            avatarUrl: item.user.avatarUrl,
+          }));
+          setFriends(formattedFriends);
+          setEmptyFriendMessage('');
+        }
+      } catch (error) {
+        console.error('Error fetching friends:', error);
+        setEmptyFriendMessage('Không thể tải danh sách bạn. Vui lòng thử lại sau.');
+      } finally {
+        if (isMounted) setIsLoading(false); // ✅ FIX QUAN TRỌNG
+      }
+    };
+
     fetchUserData();
+    fetchFriends();
+
     return () => {
       isMounted = false;
     };
   }, []);
+
 
   // Skeleton loading component
   const SkeletonLoader = () => (
@@ -149,17 +182,63 @@ const GroupForumScreen: React.FC = () => {
               <SkeletonLoader />
             </>
           ) : (
-            friends.map((friend) => (
-              <TouchableOpacity key={friend.id} style={styles.friendItem}>
-                <LinearGradient
-                  colors={['#3B82F6', '#7C3AED']}
-                  style={styles.avatarBorder}
-                >
-                  <Image source={{ uri: friend.avatar }} style={styles.avatar} />
-                </LinearGradient>
-                <Text style={styles.friendName}>{friend.name}</Text>
-              </TouchableOpacity>
-            ))
+            friends.length === 0 ? (
+              <Text style={{ paddingHorizontal: 24, fontStyle: 'italic', color: '#64748B' }}>
+                {emptyFriendMessage}
+              </Text>
+            ) : (
+              friends.length === 0 ? (
+                <Text style={{ paddingHorizontal: 24, fontStyle: 'italic', color: '#64748B' }}>
+                  {emptyFriendMessage}
+                </Text>
+              ) : (
+                friends.map((friend) => (
+                  <TouchableOpacity
+                    key={friend.id}
+                    style={styles.friendItem}
+                    onPress={() =>
+                      navigation.navigate('Chat', {
+                        friend: {
+                          user: {
+                            id: friend.id,
+                            name: friend.name,
+                            avatarUrl: friend.avatarUrl,
+                          },
+                          chat: {
+                            id: null, 
+                          },
+                        },
+                      })
+                    }
+                  >
+                    <LinearGradient colors={['#3B82F6', '#7C3AED']} style={styles.avatarBorder}>
+                      {friend.avatarUrl ? (
+                        <Image source={{ uri: friend.avatarUrl }} style={styles.avatar} />
+                      ) : (
+                        <View
+                          style={[
+                            styles.avatar,
+                            {
+                              backgroundColor: '#E0E7FF',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            },
+                          ]}
+                        >
+                          <FontAwesome name="user" size={28} color="#6366F1" />
+                        </View>
+                      )}
+                    </LinearGradient>
+                    <Text style={styles.friendName} numberOfLines={1}>
+                      {friend.name}
+                    </Text>
+                  </TouchableOpacity>
+
+                ))
+              )
+
+            )
+
           )}
         </ScrollView>
 

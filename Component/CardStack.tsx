@@ -11,7 +11,7 @@ interface User {
   educationLevel?: string;
   studyPreferences: string[] | { $values: string[] };
   subjects: string[] | { $values: string[] };
-  avatars: string[] | { $values: string[] };
+  avatarUrl: string;
 }
 
 interface CardStackProps {

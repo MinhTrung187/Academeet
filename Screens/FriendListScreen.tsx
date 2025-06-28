@@ -19,22 +19,22 @@ const FRIEND_ITEM_WIDTH = width > 600 ? width * 0.3 : width * 0.9;
 
 interface Friend {
   id: string;
-  user?: {
+  user: {
     id: string;
     name: string;
     avatarUrl?: string;
   };
-  name: string;
-  avatarUrl?: string;
   lastMessage?: string;
   timestamp?: string;
 }
+
+
 
 const FriendItem: React.FC<{ friend: Friend; onPress: () => void }> = ({ friend, onPress }) => {
   return (
     <TouchableOpacity style={styles.friendItem} onPress={onPress}>
       <Image
-        source={{ uri: friend.avatarUrl || 'https://placekitten.com/200/200' }}
+        source={{ uri: friend.user?.avatarUrl }}
         style={styles.friendAvatar}
       />
       <View style={styles.friendInfo}>
@@ -62,14 +62,46 @@ const FriendListScreen: React.FC = () => {
             accept: '*/*',
           },
         });
+
         const data = await response.json();
-        console.log('API Response:', data); // Kiểm tra dữ liệu API
+        console.log('API Response:', data);
+
         if (data && Array.isArray(data)) {
-          const processedData = data.map((item, index) => ({
-            ...item,
-            id: item.id || `temp-id-${index}`, // Đảm bảo id duy nhất
-            avatarUrl: item.avatarUrl || 'https://placekitten.com/200/200', // Đặt URL mặc định
-          }));
+          const processedData = data.map((item, index) => {
+            const messageContent = item.chat?.lastMessage?.content || '';
+            const senderId = item.chat?.lastMessage?.senderId;
+            const friendId = item.user?.id;
+
+            const finalMessage =
+              senderId && friendId && senderId !== friendId
+                ? `You: ${messageContent}`
+                : messageContent;
+
+
+            const sentAt = item.chat?.lastMessage?.sentAt;
+            const localTime = sentAt
+              ? new Date(new Date(sentAt).getTime() + 7 * 60 * 60 * 1000).toLocaleString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+              })
+              : 'N/A';
+
+
+            return {
+              id: item.user.id || `temp-${index}`,
+              user: {
+                id: item.user.id,
+                name: item.user.name,
+                avatarUrl: item.user.avatarUrl || 'https://placekitten.com/200/200',
+              },
+              lastMessage: finalMessage,
+              timestamp: localTime,
+            };
+          });
+
           setFriends(processedData);
         } else {
           setFriends([]);
@@ -82,6 +114,8 @@ const FriendListScreen: React.FC = () => {
       }
     };
 
+
+
     fetchFriends();
   }, []);
 
@@ -89,13 +123,8 @@ const FriendListScreen: React.FC = () => {
     <FriendItem friend={item} onPress={() => navigation.navigate('Chat', { friend: item })} />
   );
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Đang tải...</Text>
-      </View>
-    );
-  }
+
+
 
   return (
     <>
@@ -105,20 +134,25 @@ const FriendListScreen: React.FC = () => {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Trò chuyện</Text>
+            <Text style={styles.headerTitle}>Chat</Text>
           </View>
           <View style={styles.friendListContainer}>
-            {friends.length > 0 ? (
-              <FlatList
-                data={friends}
-                renderItem={renderFriendItem}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.friendListContent}
-              />
-            ) : (
-              <Text style={styles.noFriendsText}>Không có bạn bè nào</Text>
-            )}
+            <View style={styles.friendListContainer}>
+              {loading ? (
+                <Text style={styles.loadingText}>Loading...</Text>
+              ) : friends.length > 0 ? (
+                <FlatList
+                  data={friends}
+                  renderItem={renderFriendItem}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.friendListContent}
+                />
+              ) : (
+                <Text style={styles.noFriendsText}>No friends found</Text>
+              )}
+            </View>
+
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -138,7 +172,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     paddingVertical: 16,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2563EB',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -171,6 +205,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC', // hoặc màu nền tương thích
+  },
+
   friendAvatar: {
     width: 50,
     height: 50,

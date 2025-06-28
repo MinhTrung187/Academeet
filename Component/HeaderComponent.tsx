@@ -7,6 +7,8 @@ import axios from 'axios'; // Giả sử bạn đã cài đặt axios
 const HeaderComponent = () => {
   const { width } = Dimensions.get('window');
   const [userName, setUserName] = useState<string>(''); // State cho tên người dùng
+  const [avatarUrl, setAvatarUrl] = useState<string>(''); // State cho avatar người dùng
+
   const [isLoading, setIsLoading] = useState<boolean>(true); // Thêm trạng thái loading
 
   // Fetch dữ liệu người dùng
@@ -14,8 +16,9 @@ const HeaderComponent = () => {
     const fetchUserData = async () => {
       setIsLoading(true); // Bắt đầu loading
       try {
-        const response = await axios.get<{ name: string }>('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user');
+        const response = await axios.get<{ name: string, avatarUrl: string }>('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user');
         setUserName(response.data.name);
+        setAvatarUrl(response.data.avatarUrl || 'https://randomuser.me/api/portraits/men/1.jpg');
       } catch (error) {
         console.error('Error fetching user data:', error);
         setUserName('User'); // Giá trị mặc định nếu API thất bại
@@ -35,7 +38,7 @@ const HeaderComponent = () => {
     >
       <View style={styles.userInfo}>
         <Image
-          source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
+          source={{ uri: avatarUrl }}
           style={styles.avatarLarge}
         />
         <View style={styles.userTextContainer}>
