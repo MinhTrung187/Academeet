@@ -1,15 +1,32 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
 import BookCard from "../Component/BookCard";
 import { useNavigation } from '@react-navigation/native';
 
-
 const { width, height } = Dimensions.get("window");
 
-
 const WelcomeScreen = () => {
-  
-    const navigation:any = useNavigation();
+  const navigation: any = useNavigation();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Authentication/check-auth', {
+          method: 'GET',
+          credentials: 'include', 
+        });
+        
+        if (response.status === 200) {
+          navigation.navigate('Home');
+        }
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        // Stay on WelcomeScreen if auth check fails
+      }
+    };
+
+    checkAuth();
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -20,7 +37,7 @@ const WelcomeScreen = () => {
       <Text style={styles.title}>Welcome to{"\n"}AcadeMeet</Text>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SignUp')} >
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SignUp')}>
           <Text style={styles.buttonText}>Sign Up</Text>
         </TouchableOpacity>
 

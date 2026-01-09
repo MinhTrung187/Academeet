@@ -149,7 +149,7 @@ const ChatScreen: React.FC = () => {
             id: msg.id.toString(),
             text: msg.content || '',
             senderId: msg.senderId,
-            timestamp: new Date(msg.sentAt).toLocaleTimeString([], {
+            timestamp: new Date(new Date(msg.sentAt).getTime() + 7 * 60 * 60 * 1000).toLocaleString('vi-VN', {
               hour: '2-digit',
               minute: '2-digit',
             }),
@@ -205,7 +205,7 @@ const ChatScreen: React.FC = () => {
         id: msg.id.toString(),
         text: msg.content || '',
         senderId: msg.senderId,
-        timestamp: new Date(msg.sentAt).toLocaleTimeString([], {
+        timestamp: new Date(new Date(msg.sentAt).getTime() + 7 * 60 * 60 * 1000).toLocaleString('vi-VN', {
           hour: '2-digit',
           minute: '2-digit',
         }),
@@ -274,7 +274,7 @@ const ChatScreen: React.FC = () => {
             id: responseData.id?.toString() || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             text: newMessage,
             senderId: currentUserId,
-            timestamp: new Date().toLocaleTimeString([], {
+            timestamp: new Date(new Date().getTime() + 7 * 60 * 60 * 1000).toLocaleString('vi-VN', {
               hour: '2-digit',
               minute: '2-digit',
             }),
@@ -385,13 +385,10 @@ const ChatScreen: React.FC = () => {
                 <FontAwesome name="paper-plane" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-
-            <View style={styles.bottomNavbarContainer}>
-            </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
+        <BottomNavbar />
       </LinearGradient>
-      <BottomNavbar />
     </>
 
   );
@@ -472,7 +469,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 8,
     marginHorizontal: 12,
-    marginBottom: 70,
+    marginBottom: 90,
     backgroundColor: '#F1F5F9',
     borderRadius: 20,
     borderWidth: 1,
@@ -513,19 +510,6 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
 
-  bottomNavbarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 5,
-  },
 });
 
 

@@ -1,154 +1,115 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, SafeAreaView, StatusBar } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Animated,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import HeaderComponent from '../Component/HeaderComponent';
 import BottomNavbar from '../Component/BottomNavbar';
 
-
 const { width } = Dimensions.get('window');
 
-const tools = [
-    { name: 'FLASHCARD', backgroundColor: '#FFB6C1', icon: '📚' },
-    { name: 'POMODORO TIMER', backgroundColor: '#D8BFD8', icon: '⏰' },
-    { name: 'NOTE-TAKING', backgroundColor: '#B0C4DE', icon: '📝' },
-    { name: 'CALENDAR', backgroundColor: '#DDA0DD', icon: '📅' },
-
-];
-
 const StudyToolScreen = () => {
-    const fadeAnim = new Animated.Value(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const navigation = useNavigation<any>();
 
-    useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-        }).start();
-    }, []);
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
-    return (
-        <LinearGradient colors={['#E6F0FA', '#F5F7FA', '#FFFFFF']} style={styles.container}>
-            <SafeAreaView style={{ flex: 1 }}>
-                <HeaderComponent />
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-                        <Text style={styles.headerText}>Study tool</Text>
-                    </Animated.View>
-                    <View style={styles.toolsContainer}>
-                        {tools.map((tool, index) => (
-                            <Animated.View key={index} style={[styles.toolCard, { opacity: fadeAnim }]}>
-                                <LinearGradient
-                                    colors={[shadeColor(tool.backgroundColor, 0.2), tool.backgroundColor, shadeColor(tool.backgroundColor, -0.2)]}
-                                    style={styles.toolGradient}
-                                >
-                                    <TouchableOpacity style={styles.toolButton} activeOpacity={0.7}>
-                                        <Text style={styles.toolIcon}>{tool.icon}</Text>
-                                        <Text style={styles.toolName}>{tool.name}</Text>
-                                        <View style={styles.arrowCircle}>
-                                            <Text style={styles.arrow}>→</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                </LinearGradient>
-                            </Animated.View>
-                        ))}
-                    </View>
-                </ScrollView>
-                <BottomNavbar />
-            </SafeAreaView>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <HeaderComponent />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+          <Text style={styles.headerText}>Study Tool</Text>
+        </Animated.View>
 
-        </LinearGradient>
-    );
-};
-
-// Hàm tạo màu shade (tương tự HomeScreen)
-const shadeColor = (color: any, percent: any) => {
-    const f = parseInt(color.slice(1), 16);
-    const t = percent < 0 ? 0 : 255;
-    const p = Math.abs(percent);
-    const R = f >> 16;
-    const G = (f >> 8) & 0x00FF;
-    const B = f & 0x0000FF;
-    return (
-        '#' +
-        (
-            0x1000000 +
-            (Math.round((t - R) * p) + R) * 0x10000 +
-            (Math.round((t - G) * p) + G) * 0x100 +
-            (Math.round((t - B) * p) + B)
-        )
-            .toString(16)
-            .slice(1)
-    );
+        <TouchableOpacity
+          style={styles.toolCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('TaskManagementScreen')}
+        >
+          <MaterialCommunityIcons
+            name="clipboard-check-outline"
+            size={50}
+            color="#4F46E5"
+            style={styles.toolIcon}
+          />
+          <Text style={styles.toolName}>Task Management</Text>
+          <Text style={styles.toolDescription}>
+            Organize your study tasks, track progress, and stay productive.
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+      <BottomNavbar />
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
-
-    },
-    scrollContent: {
-        flexGrow: 1,
-        alignItems: 'center',
-        marginTop: 20
-    },
-    header: {
-        marginBottom: 20,
-    },
-    headerText: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: '#1E3A8A',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    toolsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        width: width - 32,
-    },
-    toolCard: {
-        width: (width - 48) / 2,
-        marginBottom: 16,
-    },
-    toolGradient: {
-        height: 120,
-        borderRadius: 15,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-    },
-    toolButton: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    toolIcon: {
-        fontSize: 30,
-        marginBottom: 8,
-    },
-    toolName: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#1E3A8A',
-        textAlign: 'center',
-    },
-    arrowCircle: {
-        position: 'absolute',
-        bottom: 8,
-        right: 8,
-        backgroundColor: 'rgba(30, 58, 138, 0.2)',
-        padding: 4,
-        borderRadius: 12,
-    },
-    arrow: {
-        fontSize: 14,
-        color: '#1E3A8A',
-    },
+  safeArea: {
+    flex: 1,
+    marginTop: StatusBar.currentHeight || 0,
+    backgroundColor: '#F9FAFB',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 80,
+    alignItems: 'center',
+  },
+  header: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  headerText: {
+    fontSize: 24,
+    fontFamily: 'Poppins-Bold',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  toolCard: {
+    backgroundColor: '#FFFFFF',
+    width: width - 40,
+    borderRadius: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#4F46E5',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  toolIcon: {
+    marginBottom: 15,
+  },
+  toolName: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1E3A8A',
+    marginBottom: 8,
+  },
+  toolDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });
 
 export default StudyToolScreen;

@@ -10,6 +10,7 @@ interface FriendRequest {
   recipientName: string;
   sentAt: string;
   status: string;
+  senderAvatarUrl?: string;
 }
 
 interface RequestListProps {
@@ -31,7 +32,12 @@ const RequestList: React.FC<RequestListProps> = ({ requests, onRefresh, refreshi
         requests.map((request) => (
           <View key={request.$id || request.senderId} style={styles.requestCard}>
             <View style={styles.requestHeader}>
-              <Image source={{ uri: `https://api.adorable.io/avatars/50/${request.senderId}` }} style={styles.requestAvatar} />
+              <Image 
+                source={{ 
+                  uri: request.senderAvatarUrl || `https://api.adorable.io/avatars/50/${request.senderId}` 
+                }} 
+                style={styles.requestAvatar} 
+              />
               <View style={styles.requestInfo}>
                 <Text style={styles.requestName}>{request.senderName}</Text>
                 <Text style={styles.requestTime}>
@@ -42,7 +48,7 @@ const RequestList: React.FC<RequestListProps> = ({ requests, onRefresh, refreshi
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
-                    timeZone: 'Asia/Ho_Chi_Minh', // Chuyển đổi sang giờ Việt Nam
+                    timeZone: 'Asia/Ho_Chi_Minh',
                   })}
                 </Text>
               </View>
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     fontFamily: 'Poppins-Regular',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowColor: 'rgba(0, 0, 0, 0*exp://172.20.10.2:8081.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },

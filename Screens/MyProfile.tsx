@@ -16,6 +16,8 @@ import { FontAwesome } from '@expo/vector-icons';
 import BottomNavbar from '../Component/BottomNavbar';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 import axios from 'axios';
 
@@ -25,7 +27,7 @@ const CARD_WIDTH = width - 32;
 type RootStackParamList = {
   Welcome: undefined;
   BasicInfo: undefined;
-  // add other screens here if needed
+  Premium: undefined;
 };
 
 const ProfileScreen: React.FC = () => {
@@ -67,10 +69,8 @@ const ProfileScreen: React.FC = () => {
           },
         });
 
-        // Nếu API trả về link ảnh mới (giả sử response.data = newAvatarUrl)
         const newAvatarUrl = response.data?.url || image.uri;
 
-        // Cập nhật avatar ngay không cần reload
         setUserData(prev => ({
           ...prev,
           avatars: { $values: [newAvatarUrl] },
@@ -106,11 +106,24 @@ const ProfileScreen: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const handleLogout = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Welcome' }],
-    });
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Authentication/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        await AsyncStorage.removeItem('hasShownGuide');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Welcome' }],
+        });
+      } else {
+        console.error('Logout failed:', response.status);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   useEffect(() => {
@@ -205,6 +218,19 @@ const ProfileScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <TouchableOpacity
+            style={styles.premiumButton}
+            onPress={() => navigation.navigate('Premium')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#FACC15', '#F59E0B']}
+              style={styles.premiumGradient}
+            >
+              <FontAwesome name="star" size={16} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.premiumText}>Activate Premium</Text>
+            </LinearGradient>
+          </TouchableOpacity>
           <Animated.View style={[styles.avatarWrapper, { transform: [{ scale: isLoading ? 0 : scaleAnim }] }]}>
             <TouchableOpacity onPress={handleAvatarPress}>
               <LinearGradient
@@ -443,6 +469,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Poppins-SemiBold',
   },
+  premiumButton: {
+    position: 'absolute',       // Đưa ra khỏi flow layout
+    top: 16,
+    right: 20,
+    zIndex: 10,                 // Hiện lên trên các view khác
+    borderRadius: 24,
+    overflow: 'hidden',
+    elevation: 4,               // Đổ bóng cho Android (nếu cần)
+    shadowColor: '#000',        // Đổ bóng cho iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  premiumGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  premiumText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
+  },
+
 });
 
 export default ProfileScreen;

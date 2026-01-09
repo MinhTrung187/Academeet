@@ -35,3 +35,5 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+academeet-344eb-firebase-adminsdk-fbsvc-d483c90736.json
+google-services.json

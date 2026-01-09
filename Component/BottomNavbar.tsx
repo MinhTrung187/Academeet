@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useNavigation, useRoute, NavigationProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import { Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 type BottomNavbarProps = {
@@ -25,23 +26,24 @@ type RootStackParamList = {
 
 const { width } = Dimensions.get('window');
 const isSmallDevice = width < 360;
-const tabWidth = width / 6.5; // responsive chia 6.5 phần (số tab = 6)
+const tabWidth = width / 6.5;
 
 const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute();
   const currentRouteName = route.name as keyof RootStackParamList;
   const activeScreen = currentScreen || currentRouteName;
+  const insets = useSafeAreaInsets();
 
   const tabs = [
-    { name: 'Home', icon: 'home', iconLib: 'Feather', symbol: 'Home' },
-    { name: 'FindFriend', icon: 'user-plus', iconLib: 'FontAwesome', symbol: 'Friend' },
-    { name: 'StudyTool', icon: 'pencil-square-o', iconLib: 'FontAwesome', symbol: 'StudyTool' },
-    { name: 'AIScreen', icon: 'cogs', iconLib: 'FontAwesome', symbol: 'AIChat' },
-    { name: 'FindLocation', icon: 'map-marker', iconLib: 'FontAwesome', symbol: 'Location' },
-    { name: 'MyProfile', icon: 'user-circle', iconLib: 'FontAwesome', symbol: 'Profile' }, // 👈 thêm dòng này
-
+    { name: 'Home', icon: 'home', iconLib: 'Feather' },
+    { name: 'FindFriend', icon: 'users', iconLib: 'Feather' },
+    { name: 'StudyTool', icon: 'book-open', iconLib: 'Feather' },
+    { name: 'AIScreen', icon: 'message-circle', iconLib: 'Feather' },
+    { name: 'FindLocation', icon: 'map-pin', iconLib: 'Feather' },
+    { name: 'MyProfile', icon: 'user', iconLib: 'Feather' },
   ];
+
 
   const handleFindFriendPress = async () => {
     try {
@@ -73,6 +75,25 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
 
       let location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
+      try {
+        await axios.put(
+          'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/refresh/location',
+          null, // PUT request with query parameters typically doesn't need a body
+          {
+            params: {
+              Latitude: latitude,
+              Longitude: longitude,
+            },
+            withCredentials: true,
+          }
+        );
+        console.log('✅ Location refreshed on backend successfully.');
+      } catch (backendError: any) {
+        console.error('❌ Error refreshing location on backend:', backendError);
+        const errorMessage = backendError.response?.data?.detail || backendError.response?.data?.message || 'Failed to refresh location on server.';
+        // Alert.alert('Error', `Failed to update location on server: ${errorMessage}`);
+        // Continue to navigate even if backend update fails, as location is still fetched locally
+      }
 
       let addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
       const address = addressResponse[0];
@@ -90,7 +111,7 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
       colors={['#634fee', '#1553f6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
-      style={styles.container}
+      style={[styles.container, { paddingBottom: 14 + insets.bottom }]}
     >
       {tabs.map((tab) => {
         const isActive = activeScreen === tab.name;
@@ -107,7 +128,7 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
                 } else if (tab.name === 'FindLocation') {
                   handleFindLocationPress();
                 } else if (tab.name === 'StudyTool') {
-                  navigation.navigate('Premium');
+                  navigation.navigate('StudyTool');
                 } else if (tab.name === 'AIScreen') {
                   navigation.navigate('AIScreen');
                 } else {
@@ -120,14 +141,11 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ currentScreen }) => {
           >
             <IconComponent
               name={tab.icon as any}
-              size={isSmallDevice ? 18 : 22} // 👈 responsive icon
+              size={isSmallDevice ? 20 : 24}
               color={isActive ? '#FFFFFF' : '#D1D5DB'}
             />
-
-            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-              {tab.symbol}
-            </Text>
             {isActive && <View style={styles.activeIndicator} />}
+
           </TouchableOpacity>
         );
       })}
@@ -140,7 +158,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 8,
-    paddingBottom: 14,
     backgroundColor: 'transparent',
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(255, 255, 255, 0.3)',
@@ -154,11 +171,12 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopRightRadius: 20,
     borderTopLeftRadius: 20,
+    paddingBottom: 9
   },
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: tabWidth, // 👈 điều chỉnh chiều rộng tab
+    width: tabWidth,
     paddingVertical: isSmallDevice ? 4 : 6,
     paddingHorizontal: 4,
     borderRadius: 10,

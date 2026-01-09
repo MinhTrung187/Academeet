@@ -19,8 +19,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
-      "package": "com.academeet.Academeet"
+      "package": "com.academeet.Academeet",
+      "permissions": ["com.android.vending.BILLING"] ,
+      "minSdkVersion": 21
+
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -29,6 +33,15 @@
       "eas": {
         "projectId": "242d446e-3d94-46e9-aa52-72282055534d"
       }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/242d446e-3d94-46e9-aa52-72282055534d"
     }
   }
 }

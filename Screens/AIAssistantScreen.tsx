@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +19,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import BottomNavbar from '../Component/BottomNavbar';
 import { useNavigation } from '@react-navigation/native';
+import * as SecureStore from 'expo-secure-store';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,6 +28,22 @@ type Message = {
   id: number;
   text: string;
   isUser: boolean;
+};
+// Define data type for a message within a session from the API
+type SessionMessage = {
+  id: number;
+  role: 'User' | 'Model';
+  text: string;
+  timestamp: string;
+};
+
+// Define data type for a chat session from the API
+type ChatSession = {
+  id: number;
+  userId: string;
+  messages: SessionMessage[];
+  createdAt: string;
+  lastActiveAt: string;
 };
 
 const AIAssistantScreen: React.FC = () => {
@@ -37,6 +56,12 @@ const AIAssistantScreen: React.FC = () => {
   const [requestForFile, setRequestForFile] = useState(''); // Yêu cầu xử lý file
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = new Animated.Value(0);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+
+
+
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true); // Start as true to show loading on initial fetch
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -44,7 +69,50 @@ const AIAssistantScreen: React.FC = () => {
       duration: 600,
       useNativeDriver: true,
     }).start();
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    const loadSubscription = async () => {
+      const sub = await SecureStore.getItemAsync('subscription');
+      setSubscriptionId(sub || 'freemium');
+      console.log('Loaded subscription:', sub);
+    };
+    loadSubscription();
   }, []);
+
+
+  const fetchChatSessions = useCallback(async () => {
+    setIsLoadingSessions(true);
+    try {
+      const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/AIChat/sessions');
+      const data: ChatSession[] = await response.json();
+      const sortedSessions = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setSessions(sortedSessions);
+
+      if (sortedSessions.length > 0 && sessionId === null) { // Only load if no session is active
+        const mostRecentSession = sortedSessions[0];
+        const loadedMessages: Message[] = mostRecentSession.messages.map(msg => ({
+          id: msg.id,
+          text: msg.text.replace(/[\r\n]+$/g, '').trim(),
+          isUser: msg.role === 'User',
+        }));
+        setMessages(loadedMessages);
+        setSessionId(mostRecentSession.id.toString());
+      } else if (sortedSessions.length === 0 && sessionId !== null) {
+        setMessages([]);
+        setSessionId(null);
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [sessionId]);
+
+
+  useEffect(() => {
+    fetchChatSessions();
+  }, [fetchChatSessions]);
 
   const handleSendMessage = async () => {
     if (inputText.trim()) {
@@ -58,18 +126,29 @@ const AIAssistantScreen: React.FC = () => {
         formData.append('SessionId', sessionId || '');
         formData.append('Prompt', inputText);
 
-        const response = await fetch('https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/AIChat/send-message', {
+        const response = await fetch(`https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/AIChat/send-message/?subscriptionId=${subscriptionId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'multipart/form-data',
           },
           body: formData,
         });
+        if (response.status === 403) {
+          const errorText = await response.text();
+          if (errorText.includes("Feature limit reached")) {
+            Alert.alert(
+              "Limited Usage",
+              "You have exhausted your query limit for the current plan. Please upgrade to continue using AI."
+            );
+            setIsTyping(false);
+            return;
+          }
+        }
 
         const data = await response.json();
         if (response.ok) {
-          const cleanedText = (data.reply || 'Không có phản hồi từ AI')
-            .replace(/[\r\n]+$/g, '') 
+          const cleanedText = (data.reply || 'No response from AI')
+            .replace(/[\r\n]+$/g, '')
             .trim();
           const aiResponse: Message = {
             id: messages.length + 2,
@@ -77,7 +156,7 @@ const AIAssistantScreen: React.FC = () => {
             isUser: false,
           };
           setMessages((prev) => [...prev, aiResponse]);
-          setSessionId(data.sessionId || '');
+          setSessionId(data.sessionId ? data.sessionId.toString() : null);
         } else {
           const aiResponse: Message = {
             id: messages.length + 2,
@@ -97,6 +176,7 @@ const AIAssistantScreen: React.FC = () => {
       } finally {
         setIsTyping(false);
         scrollViewRef.current?.scrollToEnd({ animated: true });
+        fetchChatSessions();
       }
     }
   };
@@ -160,7 +240,7 @@ const AIAssistantScreen: React.FC = () => {
             isUser: false,
           };
           setMessages((prev) => [...prev, aiResponse]);
-          setSessionId(data.sessionId || '');
+          setSessionId(data.sessionId ? data.sessionId.toString() : null);
         } else {
           const aiResponse: Message = {
             id: messages.length + 2,
@@ -181,6 +261,7 @@ const AIAssistantScreen: React.FC = () => {
         setIsTyping(false);
         setUploadedFile(null); // Reset file sau khi xử lý
         scrollViewRef.current?.scrollToEnd({ animated: true });
+        fetchChatSessions();
       }
     }
   };
@@ -219,7 +300,7 @@ const AIAssistantScreen: React.FC = () => {
             style={styles.header}
           >
             <Animated.View style={[styles.headerContent, { opacity: fadeAnim }]}>
-              <Text style={styles.headerText}>AI bot chat  🤖</Text>
+              <Text style={styles.headerText}>AI bot chat</Text>
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <FontAwesome name="arrow-left" size={24} color="#fff" />
               </TouchableOpacity>
@@ -277,7 +358,7 @@ const AIAssistantScreen: React.FC = () => {
             </View>
           )}
 
-          <View style={styles.quickActionsContainer}>
+          {/* <View style={styles.quickActionsContainer}>
             <TouchableOpacity
               style={styles.quickActionButton}
               onPress={() => handleQuickAction('Summarize Document')}
@@ -296,15 +377,15 @@ const AIAssistantScreen: React.FC = () => {
             >
               <Text style={styles.quickActionText}>Ideas</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           <View style={styles.inputContainer}>
-            <TouchableOpacity style={styles.iconButton} onPress={handleDocumentUpload}>
+            {/* <TouchableOpacity style={styles.iconButton} onPress={handleDocumentUpload}>
               <FontAwesome name="paperclip" size={24} color="#3B82F6" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
               <FontAwesome name="microphone" size={24} color="#3B82F6" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TextInput
               style={styles.input}
               value={inputText}
@@ -336,12 +417,10 @@ const AIAssistantScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-
   },
   safeArea: {
     flex: 1,
-
+    marginBottom: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     position: 'absolute',
@@ -376,10 +455,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 24,
     paddingTop: 80,
-    paddingBottom: 150,
+    paddingBottom: 250,
   },
   userText: {
-    color: '#FFFFFF', // hoặc màu khác tùy ý như '#FACC15' cho vàng, '#E0F2FE' cho xanh nhạt
+    color: '#FFFFFF',
     fontWeight: '600',
   },
 
@@ -394,19 +473,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   userBubble: {
-    backgroundColor: '#4F46E5', // Deeper blue for user messages
+    backgroundColor: '#4F46E5',
     alignSelf: 'flex-end',
   },
   aiBubble: {
-    backgroundColor: '#F3F4F6', // Lighter gray for AI messages
+    backgroundColor: '#F3F4F6',
     alignSelf: 'flex-start',
   },
   messageText: {
     fontSize: 16,
-    color: '#1F2937', // Darker text for better readability
+    color: '#1F2937',
     fontFamily: 'Poppins-Regular',
-    lineHeight: 22, // Improved line spacing
-    textAlign: 'left', // Ensure text wraps neatly
+    lineHeight: 22,
+    textAlign: 'left',
   },
   typingIndicator: {
     flexDirection: 'row',
@@ -467,7 +546,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
-    marginBottom: 60,
+    paddingBottom: 40,
   },
   iconButton: {
     padding: 10,

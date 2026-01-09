@@ -17,6 +17,7 @@ import BottomNavbar from '../Component/BottomNavbar';
 import axios, { AxiosResponse, CancelTokenSource } from 'axios';
 import CardStack from '../Component/CardStack';
 import RequestList from '../Component/RequestList';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface FriendRequest {
   $id: string;
@@ -26,6 +27,7 @@ interface FriendRequest {
   recipientName: string;
   sentAt: string;
   status: string;
+  senderAvatarUrl?: string;
 }
 
 interface User {
@@ -89,29 +91,19 @@ const FindFriendsScreen = () => {
       const response: AxiosResponse<any> = await axiosInstance.get('/FriendRequest/received', {
         cancelToken: cancelTokenSourceRef.current.token,
       });
-      const data = response.data;
-      let requests: FriendRequest[] = [];
-      if (Array.isArray(data)) {
-        requests = data.map((item) => ({
-          $id: item.$id || item.sender.id,
-          senderId: item.sender.id,
-          senderName: item.sender.name,
-          recipientId: item.recipient.id,
-          recipientName: item.recipient.name,
-          sentAt: item.sentAt,
-          status: item.status,
-        }));
-      } else if (data && typeof data === 'object') {
-        requests = [{
-          $id: data.$id || data.sender.id,
-          senderId: data.sender.id,
-          senderName: data.sender.name,
-          recipientId: data.recipient.id,
-          recipientName: data.recipient.name,
-          sentAt: data.sentAt,
-          status: data.status,
-        }];
-      }
+
+      // Xử lý response mới
+      const requests: FriendRequest[] = Array.isArray(response.data) ? response.data.map((item: any) => ({
+        $id: item.sender.id, // Sử dụng sender.id làm $id vì response không có $id
+        senderId: item.sender.id,
+        senderName: item.sender.name,
+        recipientId: item.recipient.id,
+        recipientName: item.recipient.name,
+        sentAt: item.sentAt,
+        status: 'Pending', // API mới không trả về status, giả định mặc định là Pending
+        senderAvatarUrl: item.sender.avatarUrl,
+      })) : [];
+
       setFriendRequests(requests);
     } catch (err) {
       if (axios.isCancel(err)) return;
@@ -135,7 +127,7 @@ const FindFriendsScreen = () => {
         cancelToken: cancelTokenSourceRef.current.token,
         params: {
           includeFriends: false,
-          pageIndex: 1, // nếu bạn muốn phân trang thì truyền thêm
+          pageIndex: 1,
         },
       });
 
@@ -159,7 +151,7 @@ const FindFriendsScreen = () => {
       console.log('Fetched users:', filteredUsers);
 
       if (filteredUsers.length === 0) {
-        setTimeout(() => fetchUsers(), 5000); // thử lại sau 5s
+        setTimeout(() => fetchUsers(), 5000);
       }
     } catch (err) {
       if (axios.isCancel(err)) return;
@@ -169,7 +161,6 @@ const FindFriendsScreen = () => {
       setIsLoading(false);
     }
   }, [currentUser]);
-
 
   const handleSwipeRight = useCallback(
     async (user: User) => {
@@ -183,7 +174,6 @@ const FindFriendsScreen = () => {
         Alert.alert('Success', 'Friend request sent successfully!');
         setUsers((prev) => {
           const newUsers = prev.filter((u) => u.id !== user.id);
-          // Nếu danh sách user rỗng, fetch lại
           if (newUsers.length === 0) {
             fetchUsers();
           }
@@ -207,7 +197,6 @@ const FindFriendsScreen = () => {
       console.log(`Skipped user: ${user.name}`);
       setUsers((prev) => {
         const newUsers = prev.filter((u) => u.id !== user.id);
-        // Nếu danh sách user rỗng, fetch lại
         if (newUsers.length === 0) {
           fetchUsers();
         }
@@ -249,7 +238,6 @@ const FindFriendsScreen = () => {
     }
   }, [activeTab, fetchFriendRequests, fetchCurrentUser, fetchUsers, currentUser]);
 
-  // Tải lại dữ liệu khi màn hình được focus
   useFocusEffect(
     useCallback(() => {
       console.log('Screen focused, activeTab:', activeTab, 'users length:', users.length);
@@ -261,6 +249,18 @@ const FindFriendsScreen = () => {
 
   useEffect(() => {
     console.log('useEffect triggered, activeTab:', activeTab, 'currentUser:', currentUser, 'users.length:', users.length);
+    const showInitialGuide = async () => {
+      const hasShown = await AsyncStorage.getItem('hasShownGuide');
+      if (!hasShown) {
+        Alert.alert(
+          'Find Study Friends',
+          'This is where you can make friends.\n\nSwipe right to send a friend request.\nSwipe left to skip.',
+          [{ text: 'Got it!' }]
+        );
+        await AsyncStorage.setItem('hasShownGuide', 'true');
+      }
+    };
+
     const fetchData = async () => {
       console.log('fetchData started');
       if (cancelTokenSourceRef.current) cancelTokenSourceRef.current.cancel('New request initiated');
@@ -268,6 +268,7 @@ const FindFriendsScreen = () => {
       setIsLoading(true);
       setError(null);
       try {
+        showInitialGuide();
         if (activeTab === 'requests') {
           console.log('Fetching friend requests');
           await fetchFriendRequests();

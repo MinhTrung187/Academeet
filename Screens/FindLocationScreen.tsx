@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Alert, // Added Alert for error messages
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import BottomNavbar from '../Component/BottomNavbar';
 import CafeDataFetcher from '../Component/CafeDataFetcher';
+import axios from 'axios'; // Import axios
+import * as SecureStore from 'expo-secure-store';
 
 interface Location {
   id: string;
@@ -32,12 +34,23 @@ interface Location {
   cuisine?: string;
 }
 
-
+// Updated Friend interface to match API response structure
 interface Friend {
-  id: string;
-  name: string;
-  avatar: string;
-  distance: string;
+  user: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+  };
+  chat?: { // Optional, as it's not directly used for location finding
+    id: number;
+    lastMessage?: {
+      id: number;
+      senderId: string;
+      senderName: string;
+      content: string;
+      sentAt: string;
+    };
+  };
 }
 
 interface RouteParams {
@@ -50,27 +63,143 @@ const FindLocation: React.FC = () => {
   const { userAddress, coordinates } = route.params as RouteParams;
 
   const [mode, setMode] = useState<'you' | 'friends' | null>(null);
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // State for current user's ID
+  const [friends, setFriends] = useState<Friend[]>([]); // State for friends fetched from API
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]); // Changed to selectedFriendIds
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasFetched, setHasFetched] = useState(false); // ✅ new
+  const [hasFetched, setHasFetched] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
   const [showAllLocations, setShowAllLocations] = useState(false);
+  const [halfwayCoordinates, setHalfwayCoordinates] = useState<{ latitude: number; longitude: number } | null>(null); // New state for halfway coordinates
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+
   const navigation = useNavigation<any>();
-  const friends: Friend[] = [/* same as before */];
+
+  // Function to fetch current user data
+  const fetchUserData = useCallback(async () => {
+    try {
+      const response = await axios.get<{ id: string; name: string }>(
+        'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/User/current-user',
+        { withCredentials: true }
+      );
+      setCurrentUserId(response.data.id);
+    } catch (error) {
+      console.error('Error fetching current user data:', error);
+      Alert.alert('Error', 'Failed to get current user info.');
+      setCurrentUserId(null);
+    }
+  }, []);
+
+  // Function to fetch friends from API
+  const fetchFriends = useCallback(async () => {
+    try {
+      const response = await axios.get<Friend[]>(
+        'https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Relationship/friends',
+        { withCredentials: true }
+      );
+      setFriends(response.data || []);
+    } catch (error) {
+      console.error('Error fetching friends:', error);
+      Alert.alert('Error', 'Failed to load friend list.');
+      setFriends([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserData();
+    fetchFriends();
+  }, [fetchUserData, fetchFriends]);
 
   const handleCafesFetched = (cafes: Location[]) => {
     setLocations(cafes);
     setIsLoading(false);
     setShowLocations(true);
-    setHasFetched(true); // ✅ prevent re-fetch
+    setHasFetched(true);
   };
+  useEffect(() => {
+    const loadSubscription = async () => {
+      const sub = await SecureStore.getItemAsync('subscription');
+      setSubscriptionId(sub || 'freemium');
+      console.log('Loaded subscription:', sub);
+    };
+    loadSubscription();
+  }, []);
 
-  const handleFindLocations = () => {
-    if (selectedFriends.length > 0) {
+  const handleFindLocations = async () => {
+    if (mode === 'you') {
       setIsLoading(true);
       setShowLocations(true);
-      setHasFetched(false); // ensure fetch
+      setHasFetched(false); // Ensure fetch for 'you' mode
+      // CafeDataFetcher will be triggered by `coordinates` from route params
+    } else if (mode === 'friends') {
+      if (!currentUserId) {
+        Alert.alert('Error', 'Current user ID not available. Cannot find halfway location.');
+        return;
+      }
+      if (selectedFriendIds.length === 0) {
+        Alert.alert('Selection Required', 'Please select at least one friend to find a halfway location.');
+        return;
+      }
+
+      setIsLoading(true);
+      setShowLocations(false); // Reset locations display
+      setHalfwayCoordinates(null); // Reset halfway coordinates
+
+      try {
+  const allUserIds = [currentUserId, ...selectedFriendIds];
+  const queryParams = new URLSearchParams();
+  allUserIds.forEach(id => queryParams.append('userIds', id));
+  queryParams.append("subscriptionId", subscriptionId ?? "freemium");
+
+  const url = `https://academeet-ezathxd9h0cdb9cd.southeastasia-01.azurewebsites.net/api/Location/halfway/userids?${queryParams.toString()}`;
+
+  const response = await axios.get<{ latitude: number; longitude: number }>(
+    url,
+    { withCredentials: true }
+  );
+
+  if (
+    response.data &&
+    typeof response.data.latitude === 'number' &&
+    typeof response.data.longitude === 'number'
+  ) {
+    setHalfwayCoordinates(response.data);
+    setShowLocations(true);
+    setHasFetched(false);
+  } else {
+    Alert.alert('Error', 'Invalid halfway coordinates received.');
+    setIsLoading(false);
+  }
+
+} catch (error: any) {
+  if (axios.isAxiosError(error)) {
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.toString().includes("Feature limit reached")
+    ) {
+      Alert.alert(
+        "Feature Limit Reached",
+        "You’ve used all your location searches for the current plan. Upgrade to continue.",
+        [
+          { text: "Maybe Later", style: "cancel" },
+          {
+            text: "Upgrade Now",
+            onPress: () => navigation.navigate("Premium"),
+          },
+        ]
+      );
+      return;
+    }
+  }
+
+  console.error('Error fetching halfway location:', error);
+  Alert.alert(
+    'Error',
+    `Failed to find halfway location: ${error.response?.data?.message || error.message}`
+  );
+  setIsLoading(false);
+}
     }
   };
 
@@ -85,27 +214,35 @@ const FindLocation: React.FC = () => {
         <Text style={styles.locationDetail}>
           <Ionicons name="location-outline" size={14} color="#7D7D7D" /> {item.distanceFromYou} from you
         </Text>
+        {item.distanceFromPartner && ( // Only show if available
+          <Text style={styles.locationDetail}>
+            <Ionicons name="people-outline" size={14} color="#7D7D7D" /> {item.distanceFromPartner} from friends
+          </Text>
+        )}
+        <Text style={styles.locationTime}>
+          <Ionicons name="time-outline" size={14} color="#27AE60" /> {item.time}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 
-
   const renderFriendItem = ({ item }: { item: Friend }) => {
-    const isSelected = selectedFriends.includes(item.id);
+    const isSelected = selectedFriendIds.includes(item.user.id);
     return (
       <View style={styles.friendItem}>
-        <Image source={{ uri: item.avatar }} style={styles.friendAvatar} />
+        <Image source={{ uri: item.user.avatarUrl || `https://placehold.co/50x50/aabbcc/ffffff?text=${item.user.name.charAt(0)}` }} style={styles.friendAvatar} />
         <View style={styles.friendInfo}>
-          <Text style={styles.friendName}>{item.name}</Text>
-          <Text style={styles.friendDistance}>
+          <Text style={styles.friendName}>{item.user.name}</Text>
+          {/* You might not have distance for friends directly from this API, adjust as needed */}
+          {/* <Text style={styles.friendDistance}>
             <Ionicons name="navigate-outline" size={14} color="#7D7D7D" /> {item.distance}
-          </Text>
+          </Text> */}
         </View>
         <TouchableOpacity
           style={[styles.customToggle, isSelected && styles.customToggleSelected]}
           onPress={() =>
-            setSelectedFriends((prev) =>
-              isSelected ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+            setSelectedFriendIds((prev) =>
+              isSelected ? prev.filter((id) => id !== item.user.id) : [...prev, item.user.id]
             )
           }
         >
@@ -115,21 +252,35 @@ const FindLocation: React.FC = () => {
     );
   };
 
-  const renderLocations = () => {
-    const visibleLocations = showAllLocations ? locations : locations.slice(0, 3);
-    return (
-      <>
-        {visibleLocations.map((item) => (
-          <View key={item.id}>{renderLocationItem({ item })}</View>
-        ))}
+  const renderLocationsSection = () => {
+    const currentLocations = locations; // Use 'locations' state directly
+    const visibleLocations = showAllLocations ? currentLocations : currentLocations.slice(0, 3);
 
-        {!showAllLocations && locations.length > 3 && (
-          <TouchableOpacity style={styles.findMoreButton} onPress={() => setShowAllLocations(true)}>
-            <Text style={styles.findMoreButtonText}>Find more</Text>
-          </TouchableOpacity>
-        )}
-      </>
-    );
+    if (isLoading) {
+      return <ActivityIndicator size="large" color="#4A90E2" style={{ marginTop: 20 }} />;
+    }
+
+    if (showLocations && currentLocations.length > 0) {
+      return (
+        <>
+          {visibleLocations.map((item) => (
+            <View key={item.id}>{renderLocationItem({ item })}</View>
+          ))}
+
+          {!showAllLocations && currentLocations.length > 3 && (
+            <TouchableOpacity style={styles.findMoreButton} onPress={() => setShowAllLocations(true)}>
+              <Text style={styles.findMoreButtonText}>Find more</Text>
+            </TouchableOpacity>
+          )}
+        </>
+      );
+    }
+
+    if (showLocations && currentLocations.length === 0 && hasFetched) {
+      return <Text style={styles.noResult}>No suitable location found.</Text>;
+    }
+
+    return null; // Don't show anything until locations are explicitly requested/fetched
   };
 
 
@@ -137,19 +288,32 @@ const FindLocation: React.FC = () => {
     let timeoutId: NodeJS.Timeout;
     if (isLoading) {
       timeoutId = setTimeout(() => {
-        setIsLoading(false);
-      }, 10000);
+        // Only set isLoading to false if still loading after timeout and no data fetched yet
+        if (!hasFetched) {
+          setIsLoading(false);
+          Alert.alert('Timeout', 'Failed to load locations within expected time. Please try again.');
+        }
+      }, 15000); // Increased timeout to 15 seconds
     }
     return () => clearTimeout(timeoutId);
-  }, [isLoading]);
+  }, [isLoading, hasFetched]);
 
   return (
     <LinearGradient colors={['#E6F0FA', '#F6F8FC']} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
-        {coordinates && isLoading && !hasFetched && (
+        {/* CafeDataFetcher for 'you' mode */}
+        {mode === 'you' && coordinates && isLoading && !hasFetched && (
           <CafeDataFetcher
             latitude={coordinates.latitude}
             longitude={coordinates.longitude}
+            onCafesFetched={handleCafesFetched}
+          />
+        )}
+        {/* CafeDataFetcher for 'friends' mode */}
+        {mode === 'friends' && halfwayCoordinates && isLoading && !hasFetched && (
+          <CafeDataFetcher
+            latitude={halfwayCoordinates.latitude}
+            longitude={halfwayCoordinates.longitude}
             onCafesFetched={handleCafesFetched}
           />
         )}
@@ -161,11 +325,14 @@ const FindLocation: React.FC = () => {
               <Text style={styles.addressText}>
                 <Ionicons name="location-outline" size={16} color="#4A90E2" /> {userAddress}
               </Text>
-              <Text style={styles.addressTitle}>Latitude:</Text>
-              <Text style={styles.addressText}>{coordinates?.latitude}</Text>
-              <Text style={styles.addressTitle}>Longitude:</Text>
-
-              <Text style={styles.addressText}>{coordinates?.longitude}</Text>
+              {coordinates && (
+                <>
+                  <Text style={styles.addressTitle}>Latitude:</Text>
+                  <Text style={styles.addressText}>{coordinates.latitude}</Text>
+                  <Text style={styles.addressTitle}>Longitude:</Text>
+                  <Text style={styles.addressText}>{coordinates.longitude}</Text>
+                </>
+              )}
             </View>
           )}
 
@@ -182,7 +349,9 @@ const FindLocation: React.FC = () => {
                   setMode('you');
                   setIsLoading(true);
                   setShowLocations(true);
-                  setHasFetched(false);
+                  setHasFetched(false); // Ensure fetch for 'you' mode
+                  setLocations([]); // Clear previous locations
+                  setHalfwayCoordinates(null); // Clear halfway coordinates
                 }}
               >
                 <Ionicons name="person-outline" size={20} color="white" />
@@ -190,7 +359,12 @@ const FindLocation: React.FC = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.optionButton, { backgroundColor: '#50C878' }]}
-                onPress={() => setMode('friends')}
+                onPress={() => {
+                  setMode('friends');
+                  setShowLocations(false); // Hide locations until friends are selected and found
+                  setLocations([]); // Clear previous locations
+                  setHalfwayCoordinates(null); // Clear halfway coordinates
+                }}
               >
                 <Ionicons name="people-outline" size={20} color="white" />
                 <Text style={styles.optionText}>Me & Friends</Text>
@@ -198,50 +372,67 @@ const FindLocation: React.FC = () => {
             </View>
           ) : mode === 'you' ? (
             <>
-              {isLoading ? (
-                <ActivityIndicator size="large" color="#4A90E2" />
-              ) : showLocations && locations.length > 0 ? (
-                renderLocations()
-              ) : (
-                <Text style={styles.noResult}>No cafes found.</Text>
-              )}
+              <Text style={styles.sectionTitle}>Cafes near you</Text>
+              {renderLocationsSection()}
             </>
-          ) : (
+          ) : ( // mode === 'friends'
             <>
               <Text style={styles.sectionTitle}>Select friends</Text>
-              <FlatList
-                data={friends}
-                renderItem={renderFriendItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
+              {friends.length === 0 && !isLoading ? (
+                <Text style={styles.noResult}>No friends found. Add friends to use this feature.</Text>
+              ) : (
+                <FlatList
+                  data={friends}
+                  renderItem={renderFriendItem}
+                  keyExtractor={(item) => item.user.id}
+                  scrollEnabled={false}
+                />
+              )}
+
               <TouchableOpacity
                 style={[
                   styles.findButton,
-                  (selectedFriends.length === 0 || isLoading) && { backgroundColor: '#CCC' },
+                  (selectedFriendIds.length === 0 || isLoading) && { backgroundColor: '#CCC' },
                 ]}
                 onPress={handleFindLocations}
-                disabled={selectedFriends.length === 0 || isLoading}
+                disabled={selectedFriendIds.length === 0 || isLoading}
               >
                 <Ionicons name="search-outline" size={20} color="#FFF" />
                 <Text style={styles.findButtonText}>Find locations</Text>
               </TouchableOpacity>
 
-              {isLoading ? (
-                <ActivityIndicator size="large" color="#4A90E2" />
-              ) : showLocations && locations.length > 0 ? (
-                renderLocations()
-              ) : (
-                showLocations && <Text style={styles.noResult}>No suitable location found.</Text>
+              {halfwayCoordinates && (
+                <View style={styles.addressBox}>
+                  <Text style={styles.addressTitle}>Halfway point:</Text>
+                  <Text style={styles.addressText}>
+                    <Ionicons name="location-outline" size={16} color="#4A90E2" /> Lat: {halfwayCoordinates.latitude.toFixed(6)}, Lng: {halfwayCoordinates.longitude.toFixed(6)}
+                  </Text>
+                </View>
               )}
+
+              {renderLocationsSection()}
             </>
           )}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Bookmarks</Text>
+
+          </View>
+          <TouchableOpacity
+            style={styles.viewBookmarksButton}
+            onPress={() => navigation.navigate('ViewBookmarksScreen')}
+          >
+            <Ionicons name="bookmarks-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.viewBookmarksButtonText}>View All Bookmarked Locations</Text>
+            <Ionicons name="arrow-forward-outline" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+
         </ScrollView>
       </SafeAreaView>
       <BottomNavbar />
     </LinearGradient>
   );
 };
+
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { flex: 1 },
@@ -388,6 +579,43 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginVertical: 20,
+  },
+  sectionHeader: { // Re-added for "Your Bookmarks" section
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  seeAllText: { // Re-added for "View all" button
+    fontSize: 14,
+    color: '#3B82F6',
+    fontFamily: 'Poppins-Medium',
+    padding: 8,
+    backgroundColor: '#E0F2FE',
+    borderRadius: 12,
+  },
+  viewBookmarksButton: {
+    flexDirection: 'row',
+    backgroundColor: '#6B46C1', // A nice purple color
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between', // Distribute items
+    marginTop: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  viewBookmarksButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10, // Space from icon
+    flex: 1, // Take available space
   },
 });
 
